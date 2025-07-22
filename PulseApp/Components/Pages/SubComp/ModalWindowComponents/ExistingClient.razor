@@ -1,0 +1,225 @@
+@using Domain
+@using System.Text.Json
+@using MediatR
+@using ApiClient.Client.Commands.UpdateClient
+@using Logic.Servicies
+@using System.Text
+@using ApiClient.Client.Commands.DeleteClient
+
+@inject NavigationManager NavigationManager
+@inject IMediator Mediator
+@inject NotificationService Notification
+
+@if (isShowModalWindow)
+{
+    <ModalWindow IsOpen=@isShowModalWindow OnClose=CloseUpdateClientModalWindow WindowType=@Logic.enums.ModalWindowType.UpdateClient Entity=Client ModalWindowWidth=55 />
+}
+
+@if (isShowNewRequestModal)
+{
+    <ModalWindow IsOpen=@isShowNewRequestModal OnClose=@SwitchNewRequestModal WindowType=@Logic.enums.ModalWindowType.NewRequest 
+    Entity=@(new Request() { Client = Client }) ModalWindowWidth=55 />
+}
+@if (isShowDeleteModal)
+{
+    <DialogWindow Message=@deleteMessage OnOk=@(() => DeleteClient(Client.ClientId)) OnCancel=@(() => isShowDeleteModal = false) />
+}
+
+<div class="container standart-cursor">
+    <div class="row1">
+        <h2>@Client.Name</h2>
+        <div class="buttons">
+            <div class="tooltip-container" >
+                <svg @onclick=@(() => isShowNewRequestModal = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-plus-circle">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v8M8 12h8" />
+                </svg>
+                <span class="tooltip-text">Добавить</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=GoToExperienceWithFilter xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-truck" viewBox="0 0 16 16">
+                    <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5zm1.294 7.456A2 2 0 0 1 4.732 11h5.536a2 2 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456M12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2" />
+                </svg>
+                <span class="tooltip-text">Выезды</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=GoToRequestsWithFilter xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-line" viewBox="0 0 16 16">
+                    <path d="M8 0c4.411 0 8 2.912 8 6.492 0 1.433-.555 2.723-1.715 3.994-1.678 1.932-5.431 4.285-6.285 4.645-.83.35-.734-.197-.696-.413l.003-.018.114-.685c.027-.204.055-.521-.026-.723-.09-.223-.444-.339-.704-.395C2.846 12.39 0 9.701 0 6.492 0 2.912 3.59 0 8 0M5.022 7.686H3.497V4.918a.156.156 0 0 0-.155-.156H2.78a.156.156 0 0 0-.156.156v3.486c0 .041.017.08.044.107v.001l.002.002.002.002a.15.15 0 0 0 .108.043h2.242c.086 0 .155-.07.155-.156v-.56a.156.156 0 0 0-.155-.157m.791-2.924a.156.156 0 0 0-.156.156v3.486c0 .086.07.155.156.155h.562c.086 0 .155-.07.155-.155V4.918a.156.156 0 0 0-.155-.156zm3.863 0a.156.156 0 0 0-.156.156v2.07L7.923 4.832l-.013-.015v-.001l-.01-.01-.003-.003-.011-.009h-.001L7.88 4.79l-.003-.002-.005-.003-.008-.005h-.002l-.003-.002-.01-.004-.004-.002-.01-.003h-.002l-.003-.001-.009-.002h-.006l-.003-.001h-.004l-.002-.001h-.574a.156.156 0 0 0-.156.155v3.486c0 .086.07.155.156.155h.56c.087 0 .157-.07.157-.155v-2.07l1.6 2.16a.2.2 0 0 0 .039.038l.001.001.01.006.004.002.008.004.007.003.005.002.01.003h.003a.2.2 0 0 0 .04.006h.56c.087 0 .157-.07.157-.155V4.918a.156.156 0 0 0-.156-.156zm3.815.717v-.56a.156.156 0 0 0-.155-.157h-2.242a.16.16 0 0 0-.108.044h-.001l-.001.002-.002.003a.16.16 0 0 0-.044.107v3.486c0 .041.017.08.044.107l.002.003.002.002a.16.16 0 0 0 .108.043h2.242c.086 0 .155-.07.155-.156v-.56a.156.156 0 0 0-.155-.157H11.81v-.589h1.525c.086 0 .155-.07.155-.156v-.56a.156.156 0 0 0-.155-.157H11.81v-.589h1.525c.086 0 .155-.07.155-.156Z" />
+                </svg>
+                <span class="tooltip-text">Заявки</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=ShowUpdateClientModalWindow xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon>
+                </svg>
+                <span class="tooltip-text">Редактировать</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=@(() => isShowDeleteModal = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                </svg>
+                <span class="tooltip-text">Удалить</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=Close xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span class="tooltip-text">Закрыть</span>
+            </div>
+        </div>
+    </div>
+    <div class="row2">Информация</div>
+    <div class="row3">
+        <table>
+            <colgroup>
+                <col>
+                <col>
+            </colgroup>
+            <tr>
+                <td>Контакты</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Client.Contact @onblur=@(() => microClientUpdate(nameof(Client.Contact))) /></td>
+            </tr>
+            <tr>
+                <td>Почта</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Client.EMail @onblur=@(() => microClientUpdate(nameof(Client.EMail))) /></td>
+            </tr>
+            <tr>
+                <td>Телефон</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Client.Phone @onblur=@(() => microClientUpdate(nameof(Client.Phone))) /></td>
+            </tr>
+            <tr>
+                <td>Адрес</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Client.Address @onblur=@(() => microClientUpdate(nameof(Client.Address))) /></td>
+            </tr>
+            <tr>
+                <td>Дата добавления</td>
+                <td>@(!Client.CreatedDate.Equals(default(DateTime)) ? Client.CreatedDate.ToString("dd.MM.yyyy") : "-")</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Client? Client { get; set; }
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    private bool isShowDeleteModal = false;
+    private bool isShowModalWindow = false;
+    private bool isShowNewRequestModal = false;
+
+    private string deleteMessage = $"Вы дейстаительно хотите удалить клиента?";
+
+    private void ShowUpdateClientModalWindow()
+    {
+        isShowModalWindow = true;
+    }
+
+    private void CloseUpdateClientModalWindow()
+    {
+        //TODO Add page refrash
+        isShowModalWindow = false;
+    }
+
+    private void GoToRequestsWithFilter()
+    {
+        var reqFilter = new Domain.Filters.RequestFilter()
+        {
+            ClientId = Client!.ClientId
+        };
+        var reqFilterString = JsonSerializer.Serialize(reqFilter);
+        reqFilterString = Convert.ToBase64String(Encoding.UTF8.GetBytes(reqFilterString));
+
+        NavigationManager.NavigateTo($"/requests/1/{reqFilterString}");
+    }
+
+    private void GoToExperienceWithFilter()
+    {
+        var expFilter = new Domain.Filters.ExperienceFilter()
+        {
+            Client = new Domain.DTO.Clients.ClientSelectionDTO() { ClientId = Client!.ClientId, Name = Client.Name }
+        };
+        var experienceFilterString = JsonSerializer.Serialize(expFilter);
+        experienceFilterString = Convert.ToBase64String(Encoding.UTF8.GetBytes(experienceFilterString));
+
+        NavigationManager.NavigateTo($"/experiencies/1/{experienceFilterString}", true);
+    }
+
+    private void SwitchNewRequestModal()
+    {
+        isShowNewRequestModal = !isShowNewRequestModal;
+    }
+
+    private Dictionary<string, bool> IsChangeProperty = new();
+
+    protected override void OnInitialized()
+    {
+        IsChangeProperty.Add(nameof(Client.Contact), false);
+        IsChangeProperty.Add(nameof(Client.EMail), false);
+        IsChangeProperty.Add(nameof(Client.Phone), false);
+        IsChangeProperty.Add(nameof(Client.Address), false);
+
+        if (Client != null)
+            deleteMessage = $"Вы дейстаительно хотите удалить клиента {Client.Name}?";
+    }
+
+    private async Task microClientUpdate(string propChanged)
+    {
+        var command = new UpdateClientCommand();
+
+        command.ClientId = Client.ClientId;
+
+        switch (propChanged)
+        {
+            case nameof(Client.Contact):
+                command.Contact = Client.Contact;
+                break;
+            case nameof(Client.EMail):
+                command.Email = Client.EMail;
+                break;
+            case nameof(Client.Phone):
+                command.Phone = Client.Phone;
+                break;
+            case nameof(Client.Address):
+                command.Address = Client.Address;
+                break;
+        }
+
+        try
+        {
+            await Mediator.Send(command);
+            Notification.ShowSuccess("Клиент обновлен");
+        }
+        catch (HttpRequestException)
+        {
+            Notification.ShowError("Ошибка! Клиент не обновлен");
+        }
+
+        IsChangeProperty[propChanged] = false;
+    }
+
+    private async Task DeleteClient(int clientId)
+    {
+        try
+        {
+            await Mediator.Send(new DeleteClientCommand() {ClientId = clientId});
+            Notification.ShowSuccess("Клиент удален");
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        catch (HttpRequestException)
+        {
+            Notification.ShowError("Произошла ошибка, проверьте подключение к интернету");
+        }
+        catch
+        {
+            Notification.ShowError("Непредвиденная ошибка, обратитесь к администрату");
+        }
+    }
+}

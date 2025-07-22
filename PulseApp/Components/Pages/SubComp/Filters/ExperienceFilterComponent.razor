@@ -1,0 +1,127 @@
+@using Domain.Filters
+@using Domain
+@using Domain.DTO.Clients
+@using Domain.DTO.Requests
+@using Domain.DTO
+@using MediatR
+@using Logic.Servicies
+@using ApiClient.Client.Queries.GetClientSelectionDTOList
+@using ApiClient.Request.Queries.GetRequestSelectionList
+@using ApiClient.Worker.Queries.GetWorkerDTOList
+
+@inject IMediator Mediator
+@inject NotificationService NotificationService
+
+@if (isLoading)
+{
+	<p>Loading...</p>
+}
+else
+{
+	<div>
+		<PulseApp.Components.Pages.SubComp.FormComponents.ClientRequestSelection Clients=@allClients Requests=@allRequest 
+		SetRequest=@((req) => Filter.Request = req) SetClientForFilter=@((client) => Filter.Client = client)
+		clientSelectionText=@(Filter.Client == null ? "" : Filter.Client.Name)
+		requestSelectionText=@(Filter.Request == null ? "" : Filter.Request.RequestTitle) />
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.Selection Entities=@(allWorkers.Cast<object>().ToList()) 
+		IsMultySelection=@false Label="Главный сотрудник" SelectedEntity=@(Filter.MainWorker == null ? "" : Filter.MainWorker.Name) 
+		SelectEntityCallback=@((w) => Filter.MainWorker = (w as WorkerDTO)) />
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.Selection IsMultySelection=@true Entities=@(allWorkers.Cast<object>().ToList()) Label="Сотрудники"
+		selectedEntities=@(Filter.Workers == null ? new List<object>() : Filter.Workers.Cast<object>().ToList()) 
+		SelectSomeObject=@SetWorkerList />
+
+		<PulseApp.Components.Pages.SubComp.Pickers.DatePick @key=Filter IsSelectRange=@true PreSelectDateString=@GetFilterDateString() 
+		SetFromDate=@((date) => Filter.FromDate = date) SetToDate=@((date) => Filter.ToDate = date) />
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons 
+		LeftLabel="Нет гарантии" RightLabel="Есть гарантия" SelectOption=@((flag) => Filter.Garant = flag) IsFilter=@true 
+		PreSelectedOptionList=@(Filter.Garant == null ? new() {0, 1} : (Filter.Garant.Value ? new() {1} : new() {0})) />
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value=Filter.WorkPlan autocomplete="off">
+			<label for="floatingInput">План работ</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value=Filter.DoneWork autocomplete="off">
+			<label for="floatingInput">Выполненые работы</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value=Filter.UsedMaterials autocomplete="off">
+			<label for="floatingInput">Использованные материалы</label>
+		</div>
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@true LeftLabel="Работы НЕ выполнены" RightLabel="Работы завершены" 
+		SelectOption=@((flag) => Filter.IsWorkDone = flag)
+		PreSelectedOptionList=@(Filter.IsWorkDone == null ? new() {0, 1} : (Filter.IsWorkDone.Value ? new() {1} : new() {0})) />
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value=Filter.RemainWork autocomplete="off">
+			<label for="floatingInput">Использованные материалы</label>
+		</div>
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@true LeftLabel="Рабочее место НЕ прибрано" RightLabel="Рабочее место чистое"
+		SelectOption=@((flag) => Filter.IsWorkPlaceClean = flag) 
+		PreSelectedOptionList=@(Filter.IsWorkPlaceClean == null ? new() {0, 1} : (Filter.IsWorkPlaceClean.Value ? new() {1} : new() {0})) />
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@true LeftLabel="Заказчик НЕ принял работу" RightLabel="Заказчик принял работу" 
+		SelectOption=@((flag) => Filter.IsTaskAccepted = flag) 
+		PreSelectedOptionList=@(Filter.IsTaskAccepted == null ? new() {0, 1} : (Filter.IsTaskAccepted.Value ? new() {1} : new() {0}))/>
+	</div>
+}
+
+@code {
+	private bool isLoading = true;
+
+	[Parameter]
+	public ExperienceFilter Filter { get; set; }
+
+	private List<ClientSelectionDTO> allClients = null;
+	private List<RequestSelectionDTO> allRequest =null;
+	private List<WorkerDTO> allWorkers = null;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		try
+		{
+			allClients = await Mediator.Send(new GetClientSelectionDTOListQuery());
+			allRequest = await Mediator.Send(new GetRequestSelectionListQuery());
+			allWorkers = await Mediator.Send(new GetWorkerDTOListQuery());
+			isLoading = false;
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку, проверте подключение к интернету");
+		}
+	}
+
+	private string GetFilterDateString()
+	{
+		var res = "";
+		if (Filter.FromDate == null)
+			return res;
+		res += Filter.FromDate.Value.ToString("d");
+		if (Filter.ToDate != null)
+		{
+			res += " - ";
+			res += Filter.ToDate.Value.ToString("d");
+		}
+		return res;
+	}
+
+	private void SetWorkerList(List<object> objList)
+	{
+		if (objList.Count == 0)
+		{
+			Filter.Workers.Clear();
+		}
+		else if (objList[0] is WorkerDTO)
+		{
+			var workerList = objList.Cast<WorkerDTO>();
+			Filter.Workers = workerList.ToList();
+		}
+	}
+}

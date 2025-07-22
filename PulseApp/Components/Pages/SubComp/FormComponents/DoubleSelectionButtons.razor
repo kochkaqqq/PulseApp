@@ -1,0 +1,58 @@
+<div class="button-group">
+	<button class="btn @((selectedOption == 0 || selectedOptions.Contains(0)) ? "active" : "")" @onclick=@(() => SelectBtnOption(0))>@LeftLabel</button>
+	<button class="btn @((selectedOption == 1 || selectedOptions.Contains(1)) ? "active" : "")" @onclick=@(() => SelectBtnOption(1))>@RightLabel</button>
+</div>
+
+@code {
+	[Parameter]
+	public bool IsFilter { get; set; } = false;
+	[Parameter]
+	public string LeftLabel { get; set; }
+	[Parameter]
+	public string RightLabel { get; set; }
+	[Parameter]
+	public EventCallback<bool?> SelectOption { get; set; }
+	[Parameter]
+	public List<int> PreSelectedOptionList { get; set; } = new() { 1, 2 };
+	[Parameter]
+	public bool PreSelectedSingleOption { get; set; } = false;
+
+	private List<int> selectedOptions = new();
+
+	private int selectedOption;
+
+	private async Task SelectBtnOption(int i)
+	{
+		if (IsFilter)
+		{
+			if (selectedOptions.Contains(i))
+				selectedOptions.Remove(i);
+			else
+				selectedOptions.Add(i);
+
+			if (selectedOptions.Count == 2 || selectedOptions.Count == 0)
+				await SelectOption.InvokeAsync(null);
+			else if (selectedOptions[0] == 0)
+				await SelectOption.InvokeAsync(false);
+			else
+				await SelectOption.InvokeAsync(true);
+		}
+		else
+		{
+			selectedOption = i;
+			if (i == 0)
+				await SelectOption.InvokeAsync(false);
+			else
+				await SelectOption.InvokeAsync(true);
+		}
+	}
+
+	protected override void OnInitialized()
+	{
+		selectedOption = IsFilter ? -1 : (PreSelectedSingleOption ? 1 : 0);
+		if (IsFilter)
+		{
+			selectedOptions = new(PreSelectedOptionList);
+		}
+	}
+}

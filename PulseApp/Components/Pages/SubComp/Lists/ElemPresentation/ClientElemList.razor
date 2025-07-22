@@ -1,0 +1,75 @@
+﻿@using Domain.DTO
+@using PulseApp.Logic.enums
+@using Logic.Servicies
+@using MediatR
+@using ApiClient.Client.Queries.GetClient
+@using ApiClient.Exceptions
+@using Domain
+
+@inject LoadingService Loading
+@inject IMediator Mediator
+
+@if(isShowModal)
+{
+	<ModalWindow IsOpen=@isShowModal OnClose=@(() => isShowModal = false) WindowType=ModalWindowType.ExistingClient Entity=@client ModalWindowWidth=80 />
+}
+
+@if (ClientDTO != null)
+{
+	@foreach (var prop in Properties)
+	{
+		<td @onclick=OpenExistingClient>
+			@switch (prop)
+			{
+				case "Id":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ClientDTO.ClientId.ToString() />
+					break;
+				case "Name":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ClientDTO.Name />
+					break;
+				case "Contact":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ClientDTO.Contact />
+					break;
+				default:
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value="Не известно" />
+					break;
+			}
+		</td>
+	}
+}
+
+@code {
+	[Parameter]
+	public ClientListElementDTO ClientDTO { get; set; } 
+	[Parameter]
+	public List<string> Properties { get; set; }
+
+	private Domain.Client? client { get; set; }
+
+	private bool isShowModal = false;
+	private async Task OpenExistingClient()
+	{
+		Loading.ShowLoading();
+
+		try
+		{
+			client = await Mediator.Send(new GetClientQuery() { ClientId=ClientDTO.ClientId });
+		}
+		catch (HttpRequestException ex)
+		{
+
+		}
+		catch (DeserializeException ex)
+		{
+
+		}
+		finally
+		{
+			Loading.HideLoading();
+		}
+
+		while (client == null) { }
+
+		isShowModal = !isShowModal;
+	}
+}

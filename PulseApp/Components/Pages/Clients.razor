@@ -1,0 +1,142 @@
+﻿@page "/clients/{page}/{filter?}"
+@using PulseApp.Logic.enums
+@using Domain
+@using System.Text.Json
+@using Domain.DTO
+@using Domain.Filters
+@using ApiClient.Client.Commands.GetClientList
+@using MediatR
+@using ApiClient.Exceptions
+@using ApiClient.Client.Queries.GetClientsQuantity
+@using System.Text
+@using Logic.Servicies
+
+@inject IMediator mediator
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject LoadingService LoadingService
+
+@if (isLoading)
+{
+	<p>Loading...</p>
+}
+else if (isServerProblem)
+{
+	<p>Нет ответа от сервера; проверьте подключение к интернету</p>
+}
+else
+{
+	<PulseApp.Components.Pages.SubComp.Lists.List Entities=@Entities Headers=@Headers Filter=@(new Logic.Filters.FilterBase() {ClientFilter = clientFilter}) 
+	CurrentPage=@currentPage PageChanged=@PageChanged ListComponentType=@(ListComponentType.Client) OnFilterChange=@FilterChanged UpdateList=@UpdateClientList
+	PageQuantity=@(pageQuantity % 25 == 0 ? pageQuantity / 25 : pageQuantity / 25 + 1) @ref=ListComponent />
+}
+
+@if(isShowCreatingClientWindow)
+{
+	<PulseApp.Components.Pages.SubComp.ModalWindow IsOpen=@isShowCreatingClientWindow OnClose=SwitchModalWindow WindowType=ModalWindowType.NewClient ModalWindowWidth=55 />
+}
+
+<button class="fixed-button" @onclick=@(() => isShowCreatingClientWindow = true)>+ Добавить</button>
+
+@code {
+	private bool isLoading = true;
+	private bool isServerProblem = false;
+
+	private List<ClientListElementDTO> ClientsList = new List<ClientListElementDTO>();
+
+	private List<string> Headers = new List<string>() { "Id", "Название", "Контактное лицо"};
+
+	private List<object> Entities = new List<object>();
+
+	[Parameter]
+	public string? Filter { get; set; }
+	[Parameter]
+	public string Page { get; set; }
+
+	private int pageQuantity = 0;
+	private int currentPage = 1;
+	private ClientFilter clientFilter = new();
+
+	private Components.Pages.SubComp.Lists.List ListComponent = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		currentPage = int.Parse(Page);
+		if (Filter != null && Filter != string.Empty)
+		{
+			var jsonBytes = Convert.FromBase64String(Filter);
+			var jsonFilter = Encoding.UTF8.GetString(jsonBytes);
+
+			//var filterString = Uri.UnescapeDataString(Filter);
+			clientFilter = JsonSerializer.Deserialize<ClientFilter>(jsonFilter, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }) ??
+				throw new DeserializeException(nameof(ClientFilter), jsonFilter);
+		}
+
+		try
+		{
+			var ListAndCount = await mediator.Send(new GetClientListQuery() { Page = currentPage, ClientFilter = clientFilter });
+			ClientsList = ListAndCount.Item1;
+			pageQuantity = ListAndCount.Item2;
+			Entities = ClientsList.Cast<object>().ToList();
+		}
+		catch (HttpRequestException)
+		{
+			isLoading = false;
+			isServerProblem = true; //Сделать BIG Notification
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
+
+	private void PageChanged(int pageNum)
+	{
+		NavigationManager.NavigateTo($"/clients/{pageNum}/{Filter}", true);
+	}
+
+	private void FilterChanged()
+	{
+		var filterString = JsonSerializer.Serialize(clientFilter);
+		filterString = Convert.ToBase64String(Encoding.UTF8.GetBytes(filterString));
+
+		//filterString = Uri.EscapeDataString(filterString);
+		NavigationManager.NavigateTo($"clients/1/{filterString}", true);
+	}
+
+	private bool isShowCreatingClientWindow = false;
+
+	private void SwitchModalWindow()
+	{
+		isShowCreatingClientWindow = !isShowCreatingClientWindow;
+		NavigationManager.Refresh(true);
+	}
+
+	private async Task UpdateClientList()
+	{
+		LoadingService.ShowLoading();
+		try
+		{
+			var ListAndCount = await mediator.Send(new GetClientListQuery() { Page = currentPage + 1, ClientFilter = clientFilter });
+			ClientsList.AddRange(ListAndCount.Item1);
+			pageQuantity = ListAndCount.Item2;
+			Entities = ClientsList.Cast<object>().ToList();
+			currentPage += 1;
+		}
+		catch (HttpRequestException)
+		{
+			isLoading = false;
+			isServerProblem = true;
+			NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+		}
+		catch
+		{
+			isLoading = false;
+			isServerProblem = true;
+			NotificationService.ShowError("Сервер вернул не корректные данные, обратитесь к администратору");
+		}
+		LoadingService.HideLoading();
+	}
+}
+

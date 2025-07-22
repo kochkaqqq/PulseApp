@@ -1,0 +1,85 @@
+@using MediatR;
+@using ApiClient.Worker.Commands.AddWorker
+@using Logic.Servicies
+@using Logic.enums
+@using Domain
+
+@inject IMediator Mediator
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+
+<div class="container">
+	<div class="row1">
+		<div>
+			<h3>Новый сотрудник</h3>
+		</div>
+
+		<div class="buttons">
+			<div class="tooltip-container">
+				<svg @onclick=CloseWindow xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+				<span class="tooltip-text">Закрыть</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="row2">
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="worker.Name" autocomplete="off">
+			<label for="floatingInput">Имя</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="worker.Description" autocomplete="off">
+			<label for="floatingInput">Описание</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input type="number" class="form-control" id="floatingInput" @bind-value="worker.ShiftSalary" autocomplete="off">
+			<label for="floatingInput">Оплата за смену</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input type="number" class="form-control" id="floatingInput" @bind-value="worker.HourSalary" autocomplete="off">
+			<label for="floatingInput">Оплата за час</label>
+		</div>
+
+		<button class="save-button" @onclick=AddWorker>
+			<p>Добавить</p>
+		</button>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public EventCallback CloseWindow { get; set; }
+
+	private Worker worker = new();
+
+	private async Task AddWorker()
+	{
+		try
+		{
+			await Mediator.Send(new AddWorkerCommand()
+			{
+				Name = worker.Name,
+				Description = worker.Description,
+				ShiftSalary = worker.ShiftSalary,
+				HourSalary = worker.HourSalary
+			});
+			NotificationService.ShowSuccess("Сотрудник добавлен");
+			NavigationManager.NavigateTo("/settings", true);
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+		}
+		catch
+		{
+			NotificationService.ShowError("Сервер вернул некорректные данные, обратитесь к администратору");
+		}
+	}
+}

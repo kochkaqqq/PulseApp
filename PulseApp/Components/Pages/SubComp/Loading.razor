@@ -1,0 +1,22 @@
+@if (isLoading)
+{
+    <div class="loading-container">
+        <img src="img/Loading.gif" alt="Loading..." class="loading-gif" />
+    </div>
+}
+
+@code {
+    private bool isLoading = false;
+
+    public void ShowLoading()
+    {
+        isLoading = true;
+        StateHasChanged();
+    }
+
+    public void HideLoading()
+    {
+        isLoading = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,68 @@
+@using Domain.Filters
+@using Domain
+@using MediatR
+@using ApiClient.Client.Queries.GetClient
+
+@inject IMediator Mediator
+
+@if (RequestFilter != null && client != null)
+{
+	<div class="title-container">
+		<p style="margin-right: 1em;">Список <label>Заявок</label> по клиенту:</p>
+		<PulseApp.Components.Pages.SubComp.TypePresentation.ClientPrew Client=@client IsLink=@true />
+	</div>
+}
+else if (ExperienceFilter != null && (client != null || request != null))
+{
+	<div class="title-container">
+		<p>Список <label>Выездов</label></p>
+		@if (client != null)
+		{
+			<p style="margin-right: 1em;"> По клиенту:</p>
+			<PulseApp.Components.Pages.SubComp.TypePresentation.ClientPrew Client=@client IsLink=@true />
+		}
+		@if (request != null)
+		{
+			<p style="margin-right: 1em;"> По заявке:</p>
+			<PulseApp.Components.Pages.SubComp.TypePresentation.RequestPrew Request=@request IsLink=@true />
+		}
+	</div>
+}
+
+@code {
+	[Parameter]
+	public RequestFilter? RequestFilter { get; set; } = null;
+
+	[Parameter]
+	public ExperienceFilter? ExperienceFilter { get; set; } = null;
+
+	private Client? client = null;
+	private Request? request = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (RequestFilter != null && RequestFilter.ClientId != null)
+		{
+			try
+			{
+				client = await Mediator.Send(new GetClientQuery() { ClientId = RequestFilter.ClientId.Value });
+			}
+			catch (HttpRequestException)
+			{
+
+			}
+		}
+		else if (ExperienceFilter != null)
+		{
+			if (ExperienceFilter.Client != null)
+			{
+				client = new() { ClientId = ExperienceFilter.Client.ClientId, Name = ExperienceFilter.Client.Name };
+			}
+			else if (ExperienceFilter.Request != null)
+			{
+				client = new() { ClientId = ExperienceFilter.Request.ClientId, Name = ExperienceFilter.Request.ClientName };
+				request = new() { RequestId = ExperienceFilter.Request.RequestId, ReasonRequest = ExperienceFilter.Request.RequestTitle };
+			}
+		}
+	}
+}

@@ -1,0 +1,72 @@
+﻿@using MediatR
+@using ApiClient.Client.Commands.GetClientList
+@using Logic.Servicies
+@using Domain.enums
+@using ApiClient.Stats.GetHomePageStats
+
+@inject IMediator mediator
+@inject LoadingService LoadingService
+@inject NotificationService NotificationService
+
+@page "/"
+
+@if (!isLoading)
+{
+    <div class="dashboard">
+        <div class="card">
+            <span class="number purple">@stat[StatType.RequestWithoutDocument]</span>
+            <p class="description purple">Заявки без актов <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+
+        <div class="card">
+            <span class="number red">@stat[StatType.TomorrowExpWithoutWorkers]</span>
+            <p class="description red">Назначить сотрудников на завтрашний выезд <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+
+        <div class="card">
+            <span class="number green">@stat[StatType.UncheckedReports]</span>
+            <p class="description green">Непроверенные отчеты <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+
+        <div class="card">
+            <span class="number black">34</span>
+            <p class="description">Все заявки <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+
+        <div class="card">
+            <span class="number black">115</span>
+            <p class="description">Все выезды <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+
+        <div class="card">
+            <span class="number orange">@stat[StatType.ExperienceWithoutReport]</span>
+            <p class="description orange">Выезды без отчетов <img src="img/arrow.svg" alt="Стрелка"></p>
+        </div>
+    </div>
+}
+
+@code {
+    private Dictionary<StatType, int> stat = new();
+
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        //await Updater.UpdatorManager.Start();
+
+        LoadingService.ShowLoading();
+
+        try
+        {
+            stat = await mediator.Send(new GetHomePageStatsQuery());
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Сервер вернул ошибку, проверьте подключение к интернету");
+        }
+
+        LoadingService.HideLoading();
+        StateHasChanged();
+    }
+}

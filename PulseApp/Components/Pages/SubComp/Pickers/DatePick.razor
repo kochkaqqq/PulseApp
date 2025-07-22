@@ -1,0 +1,248 @@
+<div class="datepicker-container">
+    <div class="form-floating mb-3">
+        <input class="form-control" id="floatingInput" value=@PreSelectDateString @onfocus=ShowCalendar>
+        <label for="floatingInput">@(IsSelectRange ? "Диапазон дат" : "Дата")</label>
+    </div>
+
+    @if (isShowCalendar)
+    {
+        <div class="datepicker">
+            <!-- .datepicker-header -->
+            <div class="datepicker-header">
+                <button class="prev" @onclick=@(() => AddMonth(-1))>Пред</button>
+
+                <div>
+                    <select class="month-input" @bind=SelectedMonth>
+                        @foreach (var month in MonthOptions)
+                        {
+                            <option value=@month.Value >@month.Text</option>
+                        }
+                    </select>
+                    <input type="number" class="year-input" @bind=SelectedYear />
+                </div>
+
+                <button class="next" @onclick=@(() => AddMonth(1))>След</button>
+            </div>
+            <!-- /.datepicker-header -->
+            <!-- .days -->
+            <div class="days">
+                <span>Пн</span>
+                <span>Вт</span>
+                <span>Ср</span>
+                <span>Чт</span>
+                <span>Пт</span>
+                <span>Сб</span>
+                <span>Вс</span>
+            </div>
+            <!-- /.days -->
+            <!-- .dates -->
+            <div class="dates">
+                @foreach (var week in daysMatrix)
+                {
+                    @foreach (var day in week)
+                    {
+                        @if (day != null)
+                        {
+                            <button @onclick=@(() => SelectDate(day.Value)) class=@GetDayClass(day)>@day.Value.Day</button>
+                        }
+                        else
+                        {
+                            <button class="disabled"></button>
+                        }
+                    }
+                }
+            </div>
+            <!-- /.dates -->
+            <!-- .datepicker-footer -->
+            <div class="datepicker-footer">
+                <button @onclick=HideCalendar class="cancel">Cancel</button>
+                <button @onclick=ApplyDate class="apply">Apply</button>
+            </div>
+            <!-- /.datepicker-footer -->
+        </div>
+
+        <div class="overlay @(isShowCalendar ? "active" : "")" @onclick="HideCalendar"></div>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public bool IsSelectRange { get; set; } = true;
+    [Parameter]
+    public EventCallback<DateTime?> SetFromDate { get; set; }
+    [Parameter]
+    public EventCallback<DateTime?> SetToDate { get; set; }
+    [Parameter]
+    public EventCallback<DateTime?> SetSingleDate { get; set; }
+    [Parameter]
+    public string PreSelectDateString { get; set; } = "";
+
+    private DateTime? fromDate = null;
+    private DateTime? toDate = null;
+
+    private bool isShowCalendar = false;
+    private void ShowCalendar()
+    {
+        GenerateCalendar(DateTime.Now);
+        isShowCalendar = true;
+        StateHasChanged();
+    }
+    private void HideCalendar()
+    {
+        isShowCalendar = false;
+    }
+
+    private List<List<DateTime?>> daysMatrix = new();
+    private void GenerateCalendar(DateTime month)
+    {
+        var firstDayOfMonth = new DateTime(month.Year, month.Month, 1);
+        var dayOfWeek = firstDayOfMonth.DayOfWeek;
+        var daysInMonth = DateTime.DaysInMonth(month.Year, month.Month);
+
+        // Создаем матрицу дней
+        var offset = (int)dayOfWeek == 0 ? 6 : (int)dayOfWeek - 1;
+
+        daysMatrix.Clear();
+
+        var allDays = new List<DateTime?>();
+        for (int i = 0; i < offset; i++)
+        {
+            allDays.Add(null);
+        }
+        for (int i = 1; i <= daysInMonth; i++)
+        {
+            allDays.Add(new DateTime(month.Year, month.Month, i));
+        }
+
+        while (allDays.Count < 7 * 6)
+            allDays.Add(null);
+
+        daysMatrix = new List<List<DateTime?>>();
+        for (int i = 0; i < 6; i++)
+            daysMatrix.Add(allDays.Skip(i * 7).Take(7).ToList());
+    }
+
+    protected override void OnInitialized()
+    {
+        GenerateCalendar(DateTime.Now);
+    }
+
+    public class MonthOption
+    {
+        public string Text { get; set; }
+        public int Value { get; set; }
+    }
+
+    private static List<MonthOption> MonthOptions = new List<MonthOption>()
+    {
+        new MonthOption { Text = "Январь", Value = 1 },
+        new MonthOption { Text = "Февраль", Value = 2 },
+        new MonthOption { Text = "Март", Value = 3 },
+        new MonthOption { Text = "Апрель", Value = 4 },
+        new MonthOption { Text = "Май", Value = 5 },
+        new MonthOption { Text = "Июнь", Value = 6 },
+        new MonthOption { Text = "Июль", Value = 7 },
+        new MonthOption { Text = "Август", Value = 8 },
+        new MonthOption { Text = "Сентябрь", Value = 9 },
+        new MonthOption { Text = "Октябрь", Value = 10 },
+        new MonthOption { Text = "Ноябрь", Value = 11 },
+        new MonthOption { Text = "Декабрь", Value = 12 }
+    };
+
+    private int selectedMonth = MonthOptions[DateTime.Now.Month].Value - 1;
+    private int SelectedMonth
+    {
+        get
+        {
+            return selectedMonth;
+        }
+        set
+        {
+            selectedMonth = value;
+            GenerateCalendar(new DateTime(selectedYear, selectedMonth, 1));
+            StateHasChanged();
+        }
+
+    }
+
+    private int selectedYear = DateTime.Now.Year;
+    private int SelectedYear
+    {
+        get
+        {
+            return selectedYear;
+        }
+        set
+        {
+            selectedYear = value;
+            GenerateCalendar(new DateTime(selectedYear, selectedMonth, 1));
+            StateHasChanged();
+        }
+    }
+
+    private void AddMonth(int offset)
+    {
+        var curDate = new DateTime(SelectedYear, SelectedMonth, 1);
+        curDate = curDate.AddMonths(offset);
+        SelectedYear = curDate.Year;
+        SelectedMonth = curDate.Month;
+    }
+
+    private string GetDayClass(DateTime? date)
+    {
+        if (date == null)
+            return "disabled";
+        if (fromDate != null && toDate != null && date >= fromDate && date <= toDate)
+            return "selected";
+        if (date == fromDate || date == toDate)
+            return "highlighted";
+        return "";
+    }
+
+    private async Task SelectDate(DateTime date)
+    {
+        if (IsSelectRange)
+        {
+            if (fromDate == null)
+            {
+                fromDate = date;
+                PreSelectDateString = fromDate.Value.ToString("d") + " - ";
+            }
+            else if (fromDate != null && toDate == null)
+            {
+                toDate = date;
+                PreSelectDateString = fromDate.Value.ToString("d") + " - " + toDate.Value.ToString("d");
+                await ApplyDate();
+            }
+            else
+            {
+                fromDate = date;
+                toDate = null;
+                PreSelectDateString = fromDate.Value.ToString("d") + " - ";
+            }
+        }
+        else
+        {
+            fromDate = date;
+            PreSelectDateString = fromDate.Value.ToString("d");
+            await ApplyDate();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ApplyDate()
+    {
+        if (IsSelectRange)
+        {
+            await SetFromDate.InvokeAsync(fromDate);
+            await SetToDate.InvokeAsync(toDate);
+        }
+        else if(!IsSelectRange)
+        {
+            await SetSingleDate.InvokeAsync(fromDate);
+        }
+        HideCalendar();
+    }
+}

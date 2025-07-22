@@ -1,0 +1,16 @@
+.image-container {
+    z-index: 1;
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.displayed-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+image, video {
+    width: 100%;
+}

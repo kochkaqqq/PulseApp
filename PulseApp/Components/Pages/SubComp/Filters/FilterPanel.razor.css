@@ -1,0 +1,37 @@
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 20px;
+}
+
+/* Стили для боковой панели */
+.side-panel {
+    position: fixed;
+    top: 0;
+    right: -400px; /* Начальная позиция за пределами экрана */
+    width: 400px;
+    height: 100%;
+    background-color: #f4f4f4;
+    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.2);
+    transition: right 4s ease-in-out;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+    .side-panel.open {
+        right: 0; /* Панель открывается при добавлении класса "open" */
+    }
+
+.panel-content {
+    padding: 20px;
+}
+
+    .panel-content button {
+        margin-top: 20px;
+    }
+
+/* Затемнение фона */
+.overlay {
+    z-index: 999;
+}

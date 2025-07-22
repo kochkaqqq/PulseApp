@@ -1,0 +1,95 @@
+.container {
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    height: auto;
+}
+
+.row1, .row2, .row3 {
+    padding: 10px;
+}
+
+.row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.buttons svg {
+    margin-left: 10px;
+    cursor: pointer;
+    transition: stroke 0.3s ease;
+}
+
+    .buttons svg:hover {
+        stroke: purple;
+    }
+
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Позиционирование относительно иконки */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+    .tooltip-text::after {
+        content: '';
+        position: absolute;
+        top: 100%; /* Позиционируем треугольник под текстом */
+        left: 50%;
+        margin-left: -5px; /* Центрируем треугольник */
+        border-width: 5px;
+        border-style: solid;
+        border-color: black transparent transparent transparent;
+    }
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.row2 {
+    text-align: left;
+    font-size: 1.1em;
+}
+
+.row3 {
+    /*border: 1px solid #ccc;*/
+    padding: 20px;
+    overflow-y: auto;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+
+colgroup col:nth-child(1) {
+    width: 16.67%; /* ~5/6 от общей ширины */
+}
+
+colgroup col:nth-child(2) {
+    width: 83.33%; /* ~1/6 от общей ширины */
+}
+
+

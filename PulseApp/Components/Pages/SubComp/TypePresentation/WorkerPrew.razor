@@ -1,0 +1,14 @@
+@using Domain
+
+@if (Worker != null && Worker.WorkerId != 0)
+{
+	<String value=@Worker.Name />
+}
+else
+{
+	<P>-</p>
+}
+@code {
+	[Parameter]
+	public Worker Worker {get; set;}
+}

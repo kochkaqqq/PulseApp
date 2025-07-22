@@ -1,0 +1,68 @@
+@inject IJSRuntime JSRuntime
+
+<div class="image-container" style="z-index: 100;">
+    @if (IsVideoFile(Path))
+    {
+        <video class="displayed-media" controls @ref="videoRef">
+            <source src="@($"blob:{Guid.NewGuid()}")" type="video/mp4" >
+            Ваш браузер не поддерживает видео тег.
+        </video>
+    }
+    else
+    {
+        <img src="@($"blob:{Guid.NewGuid()}")" @ref="imgRef" />    
+    }
+</div>
+
+@code {
+    private ElementReference imgRef;
+    private ElementReference videoRef;
+
+    [Parameter, EditorRequired]
+    public string Path { get; set; } = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (File.Exists(Path))
+        {
+            var bytes = await File.ReadAllBytesAsync(Path);
+            if (IsVideoFile(Path))
+                await JSRuntime.InvokeVoidAsync("createBlobUrl", videoRef, GetMimeType(Path), bytes);
+            else
+                await JSRuntime.InvokeVoidAsync("createBlobUrl", imgRef, GetMimeType(Path), bytes);
+        }
+    }
+
+    private string GetMimeType(string filePath)
+    {
+        var extension = System.IO.Path.GetExtension(filePath).ToLowerInvariant();
+        return extension switch
+        {
+            // Изображения
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+
+            // Видео
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".ogg" => "video/ogg",
+            ".mov" => "video/quicktime",
+            ".avi" => "video/x-msvideo",
+            ".mkv" => "video/x-matroska",
+
+            _ => "application/octet-stream" // Fallback
+        };
+    }
+
+    private bool IsVideoFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        var extension = System.IO.Path.GetExtension(path)?.ToLower();
+        return extension == ".mp4" || extension == ".webm" || extension == ".ogg";
+    }
+}

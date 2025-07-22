@@ -1,0 +1,56 @@
+@using Domain.Filters 
+
+<div>
+	<div class="form-floating mb-3">
+		<input class="form-control" id="floatingInput" @bind-value="Filter.Name" />
+		<label for="floatingInput">Имя</label>
+	</div>
+
+	<PulseApp.Components.Pages.SubComp.Pickers.DatePick IsSelectRange=@true PreSelectDateString="Задайде даты" 
+		SetFromDate=@((date) => Filter.FromDate = date) SetToDate=@((date) => Filter.ToDate = date) />
+
+	<div class="form-floating mb-3">
+		<input class="form-control" id="floatingInput" @bind-value="Filter.Address">
+		<label for="floatingInput">Адрес</label>
+	</div>
+
+	<div class="form-floating mb-3">
+		<input class="form-control" id="floatingInput" @bind-value="Filter.Contact">
+		<label for="floatingInput">Контакт</label>
+	</div>
+
+	<div class="form-floating mb-3">
+		<input class="form-control" id="floatingInput" @bind-value="Filter.EMail">
+		<label for="floatingInput">Электронная почта</label>
+	</div>
+
+	<div class="form-floating mb-3">
+		<input class="form-control" id="floatingInput" @bind-value="Filter.Phone">
+		<label for="floatingInput">Телефон</label>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public ClientFilter Filter { get; set; }
+
+	private string InputValue = string.Empty;
+
+	private bool isShowCalendar = false;
+
+	private void ShowCalendar()
+	{
+		isShowCalendar = true;
+	}
+
+	private void HideCalendar()
+	{
+		isShowCalendar = false;
+	}
+
+	private void ChangeDateString(string value)
+	{
+		InputValue = value;
+		StateHasChanged();
+	}
+}

@@ -1,0 +1,300 @@
+@using Domain
+@using PulseApp.Logic.enums
+@using MediatR
+@using ApiClient.Exceptions
+@using ApiClient.Client.Queries.GetClientSelectionDTOList
+@using ApiClient.Request.Queries.GetRequestSelectionList
+@using Domain.DTO.Clients
+@using Domain.DTO.Requests
+@using Domain.DTO
+@using ApiClient.Worker.Queries.GetWorkerDTOList
+@using Logic.Servicies
+@using ApiClient.Experience.Commands.CreateExperience
+@using ApiClient.Experience.Commands.UpdateExperience
+
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+@inject LoadingService LoadingService
+
+@if (isPageLoading)
+{
+	<p>Loading...</p>
+}
+else
+{
+	<div class="container" >
+		<div class="row1">
+			<div>
+				@if (PageType == CreateEditPageType.Edit)
+				{
+					<h3>Выезд</h3>
+				}
+				else if (PageType == CreateEditPageType.Create)
+				{
+					<h3>Новый выезд</h3>
+				}
+			</div>
+
+			<div class="buttons">
+				<div class="tooltip-container">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+						<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+					</svg>
+					<span class="tooltip-text">Удалить</span>
+				</div>
+
+				<div class="tooltip-container">
+					<svg @onclick=CloseWindow xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+					<span class="tooltip-text">Закрыть</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="row2">
+			@if (PageType == CreateEditPageType.Edit)
+			{
+				<div class="form-floating mb-3">
+					<input class="form-control" id="floatingInput" value=@(Experience.Request.Client.ToString()) autocomplete="off" readonly>
+					<label for="floatingInput">Клиент</label>
+				</div>
+
+				<div class="form-floating mb-3">
+					<input class="form-control" id="floatingInput" value=@(Experience.Request.ToString()) autocomplete="off" readonly>
+					<label for="floatingInput">Заявка</label>
+				</div>
+			}
+			else if (PageType == CreateEditPageType.Create)
+			{
+				<PulseApp.Components.Pages.SubComp.FormComponents.ClientRequestSelection Clients=@clients Requests=@requests 
+				SetRequest=@SetRequest
+				clientSelectionText=@(Experience.Request == null ? "" : Experience.Request.Client.ToString()) 
+				requestSelectionText=@(Experience.Request == null ? "" : Experience.Request.ToString()) />
+			}
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.Selection Label="Старший сотрудник" Entities=@(workers.Cast<object>().ToList()) 
+			Placeholder="Выберите старшего сотрудника" SelectEntityCallback=@SetMainWorker />
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.Selection Entities=@(workers.Cast<object>().ToList()) 
+			SelectSomeObject=@SetWorkers IsMultySelection=@true Label="Сотрудники" 
+			selectedEntities=@(Experience.Workers.Select(w => new WorkerDTO() {Id = w.WorkerId, Name = w.Name}).Cast<object>().ToList()) />
+
+			<PulseApp.Components.Pages.SubComp.Pickers.DatePick IsSelectRange=@false SetSingleDate=@((date) => Experience.Date = date.Value) 
+			PreSelectDateString=@(Experience.Date == default ? "" : Experience.Date.ToString("d")) />
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@false LeftLabel="Нет гарантии" RightLabel="Есть гарантия" 
+			SelectOption=@((flag) => Experience.Garant = flag.Value) PreSelectedSingleOption=@Experience.Garant />
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Experience.WorkPlan autocomplete="off">
+				<label for="floatingInput">План работ</label>
+			</div>
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Experience.DoneWork autocomplete="off">
+				<label for="floatingInput">Выполненые работы</label>
+			</div>
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Experience.UsedMaterials autocomplete="off">
+				<label for="floatingInput">Использованные материалы</label>
+			</div>
+
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@false LeftLabel="Работы НЕ закончены" RightLabel="Работы выполнены" 
+			SelectOption=@((flag) => Experience.IsWorkDone = flag.Value) PreSelectedSingleOption=@Experience.IsWorkDone />
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Experience.RemainWork autocomplete="off">
+				<label for="floatingInput">Использованные материалы</label>
+			</div>
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@false LeftLabel="Рабочее место НЕ прибрано" RightLabel="Рабочее место чистое" 
+			SelectOption=@((flag) => Experience.IsWorkPlaceClean = flag.Value) PreSelectedSingleOption=@Experience.IsWorkPlaceClean />
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@false LeftLabel="Заказчик НЕ принял работу" RightLabel="Заказчик принял работу" 
+			SelectOption=@((flag) => Experience.IsTaskAccepted = flag.Value) PreSelectedSingleOption=@Experience.IsTaskAccepted />
+
+			<div style="display: flex;">
+				<label>Время начала:</label>
+				<input type="time" @bind=Experience.TimeStart />
+				<label>Время конца:</label>
+				<input type="time" @bind=Experience.TimeEnd />
+			</div>
+
+			<button class="save-button" @onclick=CreateEditExp>
+				@if (PageType == CreateEditPageType.Edit)
+				{
+					<p>Сохранить</p>
+				}
+				else if (PageType == CreateEditPageType.Create)
+				{
+					<p>Добавить</p>
+				}
+			</button>
+		</div>
+	</div>
+}
+
+@code {
+	private bool isPageLoading = true;
+
+	[Parameter]
+	public Experience Experience { get; set; }
+	[Parameter]
+	public CreateEditPageType PageType { get; set; }
+	[Parameter]
+	public EventCallback CloseWindow { get; set; }
+
+	private List<ClientSelectionDTO>? clients { get; set; } = null;
+	private List<RequestSelectionDTO>? requests { get; set; } = null;
+	private List<WorkerDTO>? workers { get; set; } = null;
+
+	protected override async Task OnInitializedAsync()
+	{
+		LoadingService.ShowLoading();
+
+		if (Experience == null)
+			Experience = new();
+
+		try
+		{
+			clients = await Mediator.Send(new GetClientSelectionDTOListQuery());
+			requests = await Mediator.Send(new GetRequestSelectionListQuery());
+			workers = await Mediator.Send(new GetWorkerDTOListQuery());
+			isPageLoading = false;
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Нет ответа от сервера, проверьте подключение к интернету");
+		}
+		finally
+		{
+			LoadingService.HideLoading();
+		}
+
+		if (PageType == CreateEditPageType.Create)
+			Experience.Workers = new List<Worker>();
+	}
+
+	private bool isWrongRequest = false;
+	private bool isWrongDate = false;
+
+	private void SetRequest(RequestSelectionDTO? request)
+	{
+		if (request != null)
+		{
+			Experience.Request = new Request()
+			{
+				RequestId = request.RequestId,
+				Client = new() { ClientId = request.ClientId, Name = request.ClientName },
+				ReasonRequest = request.RequestTitle
+			};
+		}
+		else
+		{
+			Experience.Request = null;
+		}
+	}
+
+	private void SetMainWorker(object obj)
+	{
+		if (obj is WorkerDTO workerDTO)
+		{
+			Experience.MainWorker = new() { WorkerId = workerDTO.Id, Name = workerDTO.Name };
+			Experience.MainWorkerId = workerDTO.Id;
+		}
+	}
+
+	private void SetWorkers(List<object> objList)
+	{
+		if (objList.Count == 0)
+		{
+			Experience.Workers.Clear();
+		}
+		else if (objList[0] is WorkerDTO)
+		{
+			var workerList = objList.Cast<WorkerDTO>();
+			Experience.Workers = workerList.Select(dto => new Worker() { WorkerId = dto.Id, Name = dto.Name }).ToList();
+		}
+	}
+
+	private async Task CreateEditExp()
+	{
+		if (Validate())
+			return;
+
+		try
+		{
+			if (PageType == CreateEditPageType.Create)
+			{
+				Experience = await Mediator.Send(new CreateExperienceCommand()
+				{
+					RequestId = Experience.Request.RequestId,
+					MainWorkerId = Experience.MainWorkerId,
+					WorkersId = Experience.Workers.Select(w => w.WorkerId),
+					Date = Experience.Date,
+					Garant = Experience.Garant,
+					WorkPlan = Experience.WorkPlan,
+					DoneWork = Experience.DoneWork,
+					UsedMaterials = Experience.UsedMaterials,
+					IsWorkDone = Experience.IsWorkDone,
+					RemainWork = Experience.RemainWork,
+					IsWorkPlaceClean = Experience.IsWorkPlaceClean,
+					IsTaskAccepted = Experience.IsTaskAccepted,
+					TimeStart = Experience.TimeStart,
+					TimeEnd = Experience.TimeEnd
+				});
+			}
+			else if (PageType == CreateEditPageType.Edit)
+			{
+				Experience = await Mediator.Send(new UpdateExperienceCommand()
+				{
+					ExperienceId = Experience.ExperienceId,
+					MainWorkerId = Experience.MainWorkerId,
+					WorkersId = Experience.Workers.Select(w => w.WorkerId),
+					Date = Experience.Date,
+					Garant = Experience.Garant,
+					WorkPlan = Experience.WorkPlan,
+					DoneWork = Experience.DoneWork,
+					UsedMaterials = Experience.UsedMaterials,
+					IsWorkDone = Experience.IsWorkDone,
+					RemainWork = Experience.RemainWork,
+					IsWorkPlaceClean = Experience.IsWorkPlaceClean,
+					IsTaskAccepted = Experience.IsTaskAccepted,
+					TimeStart = Experience.TimeStart,
+					TimeEnd = Experience.TimeEnd
+				});
+			}
+			var mes = PageType == CreateEditPageType.Create ? "Выезд успешно добавлен!" : "Выезд успешно обновлен";
+			NotificationService.ShowSuccess(mes);
+			await CloseWindow.InvokeAsync();
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Произошла ошибка. Проверьте подключение к интернету");
+		}
+	}
+
+	private bool Validate()
+	{
+		if (Experience.Request == null || Experience.Request.RequestId <= 0)
+		{
+			isWrongRequest = true;
+			NotificationService.ShowError("Выберите заявку");
+			StateHasChanged();
+		}
+		else isWrongRequest = false;
+		if (Experience.Date == default || Experience.Date == DateTime.MinValue)
+		{
+			isWrongDate = true;
+			NotificationService.ShowError("Установите дату");
+			StateHasChanged();
+		}
+		else isWrongDate = false;
+
+		return (isWrongDate || isWrongRequest);
+	}
+}

@@ -1,0 +1,75 @@
+@using Domain
+@using MediatR
+@using ApiClient.Report.Queries.DownloadReportMedia
+
+@inject IMediator Mediator
+
+
+<div class="report_container standart-cursor">
+	<div class="report_row1">
+		<div class="report_header">
+			<h5>Отчет от <strong>@Report.Worker.Name</strong></h5>
+			<div class="buttons">
+				<div class="tooltip-container">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+						<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+					</svg>
+					<span class="tooltip-text">Удалить</span>
+				</div>
+
+				<div class="tooltip-container">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon>
+					</svg>
+					<span class="tooltip-text">Редактировать</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="report_row2">
+			<div class="report_info-container">
+				<div>Сотрудник</div><div><WorkerPrew Worker=@Report.Worker /></div>
+				<div>Дата отправки</div><div><DateTimePrew date=@Report.Date IsDateShow=@true /></div>
+				<div>Время начала</div><div><DateTimePrew date=@Report.StartTime.Value IsDateShow=@false /></div>
+				<div>Время окончания</div><div><DateTimePrew date=@Report.EndTime.Value IsDateShow=@false /></div>
+				<div>Использованные материалы</div><div><String value=@Report.UsedMaterials /></div>
+				<div>Выполненые работы</div><div><String value=@Report.DoneWork /></div>
+				<div>Работы выполнены</div><div><BoolPrew Value=@Report.IsWorkDone /></div>
+				<div>Оставшиеся работы</div><div><String value=@Report.RemainWork /></div>
+				<div>Чистое рабочее место</div><div><BoolPrew Value=@Report.IsWorkplaceClean /></div>
+				<div>Работа принята</div><div><BoolPrew Value=@Report.IsWorkAccept /></div>
+			</div>
+			<div>
+				@if (isMediaDownloading)
+				{
+					<p style="color: red; margin-top: 3em;">Скачивание медиа...</p>
+				}
+				else
+				{
+					@foreach (var media in MediaFiles)
+					{
+						<MediaPrew Path=@media />
+					}
+				}
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public Report Report { get; set; }
+
+	private bool isMediaDownloading = true;
+
+	private List<string> MediaFiles { get; set; } = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		foreach (var file in Report.MediaIds)
+		{
+			MediaFiles.Add(await Mediator.Send(new DownloadReportMediaQuery() {FileName = file}));
+		}
+		isMediaDownloading = false;
+	}
+}

@@ -1,0 +1,13 @@
+﻿<thead>
+	<tr>
+		@foreach (var col in Columns)
+		{
+			<th>@col</th>
+		}
+	</tr>
+</thead>
+
+@code {
+	[Parameter]
+	public List<string> Columns { get; set; } 
+}

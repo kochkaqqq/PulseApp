@@ -1,0 +1,18 @@
+@using Domain
+
+<p>
+	@res
+</p>
+
+@code {
+	[Parameter]
+	public IEnumerable<Worker> Workers { get; set; }
+
+	private string res = string.Empty;
+
+	protected override void OnInitialized()
+	{
+		var workersName = Workers.Select(w => w.Name);
+		res = string.Join(", ", workersName);
+	}
+}

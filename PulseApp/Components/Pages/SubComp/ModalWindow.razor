@@ -1,0 +1,72 @@
+﻿@inject IJSRuntime JS
+@using PulseApp.Logic.enums
+@using Domain
+
+<div class="modal fade-in">
+    <div class="modal-content" style="width: @(ModalWindowWidth.ToString() + "%")">
+        @switch (WindowType)
+        {
+            case ModalWindowType.ExistingClient:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.ExistingClient Client=@(Entity as Client) Close=OnClose />
+                break;
+            case ModalWindowType.UpdateClient:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditClient Client=@(Entity as Client) 
+                CloseWindow=OnClose 
+                PageType=CreateEditPageType.Edit />
+                break;
+            case ModalWindowType.NewClient:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditClient Client=@(new Client())
+                CloseWindow=OnClose PageType=CreateEditPageType.Create />
+                break;
+            case ModalWindowType.ExistingRequest:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.ExistingRequest Request=@(Entity as Request) Close=OnClose />
+                break;
+            case ModalWindowType.UpdateRequest:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditRequest Close=OnClose Type=CreateEditPageType.Edit Request=@(Entity as Request) />
+                break;
+            case ModalWindowType.NewRequest:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditRequest Close=OnClose Type=CreateEditPageType.Create Request=@(Entity as Request) />
+                break;
+            case ModalWindowType.ExistingExperience:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.ExistingExperience Experience=@(Entity as Experience) Close=OnClose />
+                break;
+            case ModalWindowType.NewExperience:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditExperience PageType=CreateEditPageType.Create CloseWindow=OnClose Experience=@(Entity as Experience) />
+                break;
+            case ModalWindowType.UpdateExperience:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditExperience PageType=CreateEditPageType.Edit CloseWindow=OnClose Experience=@(Entity as Experience) />
+                break;
+            case ModalWindowType.NewWorker:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.CreateEditWorker CloseWindow=OnClose />
+                break;
+            default:
+                <PulseApp.Components.Pages.SubComp.ModalWindowComponents.ErrorModalWindow />
+                break;
+        }
+    </div>
+
+    <div class="overlay @(IsOpen ? "active" : "")" @onclick="OnClose"></div>
+</div>
+
+
+@code {
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+    [Parameter]
+    public object Entity { get; set; }
+
+    [JSInvokableAttribute("CloseModal")]
+    public async void CloseModal()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    [Parameter]
+    public ModalWindowType WindowType { get; set; }
+
+    [Parameter]
+    public int ModalWindowWidth { get; set; } = 80;
+}

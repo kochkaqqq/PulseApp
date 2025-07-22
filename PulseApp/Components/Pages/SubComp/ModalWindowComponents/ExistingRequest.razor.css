@@ -1,0 +1,154 @@
+.container {
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    height: auto;
+}
+
+.row1, .row2, .row3 {
+    padding: 10px;
+}
+
+.row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.buttons svg {
+    margin-left: 10px;
+    cursor: pointer;
+    transition: stroke 0.3s ease;
+}
+
+    .buttons svg:hover {
+        stroke: purple;
+    }
+
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Позиционирование относительно иконки */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+    .tooltip-text::after {
+        content: '';
+        position: absolute;
+        top: 100%; /* Позиционируем треугольник под текстом */
+        left: 50%;
+        margin-left: -5px; /* Центрируем треугольник */
+        border-width: 5px;
+        border-style: solid;
+        border-color: black transparent transparent transparent;
+    }
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.row2 {
+    text-align: left;
+    font-size: 1.1em;
+}
+
+.row3 {
+    /*border: 1px solid #ccc;*/
+    padding: 20px;
+    overflow-y: auto;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+
+colgroup col:nth-child(1) {
+    width: 16.67%; /* ~5/6 от общей ширины */
+}
+
+colgroup col:nth-child(2) {
+    width: 83.33%; /* ~1/6 от общей ширины */
+}
+
+.file-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background-color: transparent;
+}
+
+    .file-action-btn svg {
+        flex-shrink: 0;
+    }
+
+.open-btn {
+    color: #6a0dad;
+    border: 1px solid #6a0dad;
+}
+
+    .open-btn:hover {
+        background-color: #f0e6fa;
+    }
+
+.big-add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px 20px;
+    background-color: #6a0dad;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(106, 13, 173, 0.3);
+}
+
+    .big-add-button:hover {
+        background-color: #5a0b9d;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(106, 13, 173, 0.4);
+    }
+
+    .big-add-button:active {
+        background-color: #4a098d;
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(106, 13, 173, 0.3);
+    }
+
+.plus-icon {
+    flex-shrink: 0;
+}

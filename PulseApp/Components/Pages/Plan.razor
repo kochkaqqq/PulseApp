@@ -1,0 +1,36 @@
+@page "/plan/{date?}"
+
+@using PulseApp.Components.Pages.SubComp.PlanComponents
+@using System.Text.Json
+
+@inject NavigationManager NavigationManager
+
+<PulseApp.Components.Pages.SubComp.Pickers.DatePick IsSelectRange=@false SetSingleDate=@SetDate PreSelectDateString=@datePlan.ToString("d") />
+
+<PlanTable Date=@datePlan />
+
+<PulseApp.Components.Pages.SubComp.PlanComponents.GantDiagram DateTime=@(datePlan) />
+
+@code {
+    [Parameter]
+    public string? Date { get; set; }
+
+    private DateTime datePlan { get; set; } = DateTime.Now;
+
+    private void SetDate(DateTime? date)
+    {
+        if (date == null) 
+            return;
+        datePlan = date.Value;
+        var dateString = JsonSerializer.Serialize(datePlan);
+        NavigationManager.NavigateTo($"/plan/{dateString}", true);
+    }
+
+    protected override void OnInitialized()
+    {
+        if (Date != null && Date != string.Empty)
+        {
+            datePlan = JsonSerializer.Deserialize<DateTime>(Date);
+        }
+    }
+}

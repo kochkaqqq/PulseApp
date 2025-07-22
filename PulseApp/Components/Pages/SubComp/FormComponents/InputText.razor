@@ -1,0 +1,13 @@
+<div class="form-floating mb-3">
+    <input class="form-control" id="floatingInput" @bind-value="Text" @bind-value:event="oninput">
+    <label for="floatingInput">@Label</label>
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+}

@@ -1,0 +1,24 @@
+﻿@shrinkString
+
+@code {
+	[Parameter]
+	public string value { get; set; } 
+
+	string shrinkString = "";
+
+	protected override void OnInitialized()
+	{
+		if (value.Length > 40)
+		{
+			shrinkString = value.Substring(0, 37) + "...";
+		}
+		else if (value == null)
+		{
+			shrinkString = "null";
+		}
+		else
+		{
+			shrinkString = value;
+		}
+	}
+}

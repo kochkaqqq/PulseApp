@@ -1,0 +1,78 @@
+@using Domain
+@using PulseApp.Logic.enums
+@using Domain.DTO
+@using Logic.Servicies
+@using MediatR
+@using ApiClient.Request.Queries.GetRequest
+@using ApiClient.Exceptions
+
+@inject LoadingService LoadingService
+@inject IMediator Mediator
+@inject NotificationService NotificationService
+
+@if (isShowRequest)
+{
+	<ModalWindow Entity=@request WindowType=@ModalWindowType.ExistingRequest IsOpen=@isShowRequest ModalWindowWidth=80 OnClose=@(() => isShowRequest = false) />
+}
+
+@if (Request != null)
+{
+	@foreach (var prop in Properties)
+	{
+		<td @onclick=OpenExistedRequest >
+			@switch (prop)
+			{
+				case "№":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@(Request.RequestId.ToString()) />
+					break;
+				case "Дата":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@Request.Date IsDateShow=@true />
+					break;
+				case "Клиент":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@Request.ClientName />
+					break;
+				case "Причина вызова":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@Request.ReasonRequest />
+					break;
+				case "Работы закончены":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.StatusRequestPrew Status=@Request.Status />
+					break;
+				default:
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value="данные не считаны" />
+					break;
+			}
+		</td>
+	}
+}
+
+@code {
+	[Parameter]
+	public RequestListElementDTO Request { get; set; }
+	[Parameter]
+	public List<string> Properties { get; set; }
+
+	private bool isShowRequest = false;
+
+	private Request? request = null;
+
+	private async Task OpenExistedRequest()
+	{
+		LoadingService.ShowLoading();
+
+		try
+		{
+			request = await Mediator.Send(new GetRequestQuery() { RequestId = Request.RequestId });
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+		}
+		catch (DeserializeException)
+		{
+			NotificationService.ShowError("Сервер вернул некорректные данные. Обратитесь к админу");
+		}
+
+		LoadingService.HideLoading();
+		isShowRequest = true;
+	}
+}

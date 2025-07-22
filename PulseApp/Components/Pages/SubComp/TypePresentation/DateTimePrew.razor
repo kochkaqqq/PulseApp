@@ -1,0 +1,41 @@
+﻿@if(IsDateShow)
+{
+	@(dateString)
+}
+else
+{
+	@(timeString)
+}
+
+@code {
+	[Parameter]
+	public DateTime? date { get; set; } = default;
+	[Parameter]
+	public bool IsDateShow { get; set; }
+
+	private string timeString = "";
+	private string dateString = "";
+
+	protected override void OnInitialized()
+	{
+		if (date == null)
+		{
+			timeString = "-";
+			dateString = "-";
+			return;
+		}
+
+		if (!IsDateShow)
+		{
+			var hours = date.Value.Hour < 10 ? "0" + date.Value.Hour : date.Value.Hour.ToString();
+			var mins = date.Value.Minute < 10 ? "0" + date.Value.Minute : date.Value.Minute.ToString();
+			timeString = hours + ":" + mins;
+		}
+		else
+		{
+			var day = date.Value.Day < 10 ? "0" + date.Value.Day : date.Value.Day.ToString();
+			var month = date.Value.Month < 10 ? "0" + date.Value.Month : date.Value.Month.ToString();
+			dateString = day + "/" + month + "/" + date.Value.Year.ToString();
+		}
+	}
+}

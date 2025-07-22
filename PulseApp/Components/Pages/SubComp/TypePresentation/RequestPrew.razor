@@ -1,0 +1,52 @@
+﻿@using Logic.enums
+@using ApiClient.Request.Queries.GetRequest
+@using MediatR
+@using Logic.Servicies
+
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+@inject LoadingService LoadingService
+
+@if(isShowModal)
+{
+	<ModalWindow Entity=@Request IsOpen=@isShowModal ModalWindowWidth=60 OnClose=SwitchModal WindowType=@ModalWindowType.ExistingRequest />
+}
+
+@if (IsLink)
+{
+	<a @onclick=SwitchModal class="entity-link" ><String value=@Request.ReasonRequest /></a>
+}
+else
+{
+	<String value=@Request.ReasonRequest />
+}
+
+@code {
+	[Parameter]
+	public bool IsLink { get; set; } = true;
+	[Parameter]
+	public Domain.Request Request { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		LoadingService.ShowLoading();
+
+		try
+		{
+			Request = await Mediator.Send(new GetRequestQuery() {RequestId = Request.RequestId});
+		}
+		catch
+		{
+			NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+		}
+
+		LoadingService.HideLoading();
+	}
+
+	private bool isShowModal = false;
+
+	private void SwitchModal()
+	{
+		isShowModal = !isShowModal;
+	}
+}

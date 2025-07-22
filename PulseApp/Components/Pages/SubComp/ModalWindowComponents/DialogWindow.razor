@@ -1,0 +1,20 @@
+<div class="dialog-overlay">
+    <div class="dialog-container">
+        <div class="dialog-message">@Message</div>
+        <div class="dialog-buttons">
+            <button @onclick="OnCancel" class="btn btn-secondary">Отмена</button>
+            <button @onclick="OnOk" class="btn btn-primary">Ок</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Message { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback OnOk { get; set; }
+}

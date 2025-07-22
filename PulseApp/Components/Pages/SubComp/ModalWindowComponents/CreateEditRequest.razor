@@ -1,0 +1,362 @@
+@using Domain
+@using PulseApp.Logic.enums
+@using Domain.DTO.Clients
+@using MediatR
+@using ApiClient.Client.Queries.GetClientSelectionDTOList
+@using ApiClient.Manager.Queries.GetManagerList
+@using ApiClient.Request.Commands.CreateRequest
+@using Logic.Servicies
+@using Domain.DTO
+@using ApiClient.Request.Commands.UpdateRequest
+
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+@inject LoadingService LoadingService
+
+@if (isPageLoading)
+{
+	<p>Loading...</p>
+}
+else
+{
+
+	<div class="container">
+
+		<div class="row1">
+			<div>
+				@if (Type == CreateEditPageType.Edit)
+				{
+					<h3>Заявка</h3>
+				}
+				else if (Type == CreateEditPageType.Create)
+				{
+					<h3>Новая заявка</h3>
+				}
+			</div>
+
+			<div class="buttons">
+
+				@if (Type == CreateEditPageType.Edit)
+				{
+					<div class="tooltip-container">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+							<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+						</svg>
+						<span class="tooltip-text">Удалить</span>
+					</div>
+				}
+
+				<div class="tooltip-container">
+					<svg @onclick=Close xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+					<span class="tooltip-text">Закрыть</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="row2">
+			@if (Type == CreateEditPageType.Edit)
+			{
+				<div class="form-floating mb-3">
+					<input class="form-control" id="floatingInput" @bind=@(Request.Client.Name) readonly>
+					<label for="floatingInput">Клиент</label>
+				</div>
+			}
+			else if (Type == CreateEditPageType.Create)
+			{
+				<PulseApp.Components.Pages.SubComp.FormComponents.Selection Label="Клиент" Entities=@(AllClients.Cast<object>().ToList()) 
+				SelectEntityCallback=@SelectClient Placeholder="Выберите клиента..." PreSelectedEntityString=@(Request.Client == null ? "" : Request.Client.ToString()) />
+			}
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" readonly value=@(Type == CreateEditPageType.Edit ? Request.Date.ToString("d") : DateTime.Now.ToString("d")) >
+				<label for="floatingInput">Дата создания</label>
+			</div>
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Request.ReasonRequest autocomplete="off">
+				<label for="floatingInput">Причина заявки</label>
+			</div>
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Request.NecessaryFunds autocomplete="off">
+				<label for="floatingInput">Необходимые средства</label>
+			</div>
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.Selection Label="Менеджер" Entities=@(AllManagers.Cast<object>().ToList()) SelectEntityCallback=@SelectManager Placeholder="Выберите менеджера..." 
+			SelectedEntity=@(Request.Manager == null ? "" : Request.Manager.ToString()) />
+
+			<div class="form-floating mb-3">
+				<input class="form-control" id="floatingInput" @bind-value=Request.InternalInfo autocomplete="off">
+				<label for="floatingInput">Внутренняя информация</label>
+			</div>
+
+			<PulseApp.Components.Pages.SubComp.FormComponents.RequestStatusSelection PreSelectedStatus=@Request.Status SelectStatus=@((status) => Request.Status = status) />
+
+			<div class="form-floating mb-3">
+				<select class="form-select" id="floatingSelect" aria-label="Floating label select example" @bind=SelectedActType>
+					<option value="1">Акт</option>
+					<option value="2">Производство</option>
+				</select>
+				<label for="floatingSelect">Тип акта выполненых работ</label>
+			</div>
+
+			<div class="mb-3">
+				<button @onclick=@ActFileChoose>Файл</button>
+				@if (Request.Document == null)
+				{
+					<p>файл не выбран</p>
+				}
+				else
+				{
+					<PulseApp.Components.Pages.SubComp.TypePresentation.FilePrew Document=@Request.Document />
+				}
+			</div>
+
+			<button class="save-button" @onclick=SaveEditApply>
+				@if (Type == CreateEditPageType.Edit)
+				{
+					<p>Сохранить</p>
+				}
+				else if (Type == CreateEditPageType.Create)
+				{
+					<p>Добавить</p>
+				}
+			</button>
+		</div>
+
+	</div>
+}
+@code {
+	private bool isPageLoading = true;
+
+	[Parameter]
+	public CreateEditPageType Type { get; set; }
+	[Parameter]
+	public EventCallback Close { get; set; }
+	[Parameter]
+	public Request Request { get; set; }
+
+	private string selectedRequestStatus = "";
+	private string SelectedRequestStatus
+	{
+		get
+		{
+			return selectedRequestStatus;
+		}
+		set
+		{
+			selectedRequestStatus = value;
+			if (value == "1")
+				Request.Status = Domain.enums.Status.AtWork;
+			else if (value == "2")
+				Request.Status = Domain.enums.Status.Postponed;
+			else if (value == "3")
+				Request.Status = Domain.enums.Status.Finished;
+			else
+				Request.Status = Domain.enums.Status.None;
+		}
+	}
+
+	private string selectedActType = "";
+	private string SelectedActType
+	{
+		get
+		{
+			return selectedActType;
+		}
+		set
+		{
+			selectedActType = value;
+			if (value == "1")
+				Request.WorkResultType = Domain.enums.DoneWorkActType.Act;
+			else if (value == "2")
+				Request.WorkResultType = Domain.enums.DoneWorkActType.Production;
+			else
+				Request.WorkResultType = Domain.enums.DoneWorkActType.None;
+		}
+	}
+
+	private List<ClientSelectionDTO> AllClients = new List<ClientSelectionDTO>();
+	private void SelectClient(object? obj)
+	{
+		if (obj is ClientSelectionDTO clientDTO)
+		{
+			Request.Client = new()
+			{
+				ClientId = clientDTO.ClientId,
+				Name = clientDTO.Name
+			};
+		}
+	}
+
+	private List<ManagerDTO> AllManagers = new List<ManagerDTO>();
+	private void SelectManager(object? obj)
+	{
+		if (obj is ManagerDTO managerDTO)
+		{
+			var manager = new Manager()
+			{
+				ManagerId = managerDTO.Id,
+				Name = managerDTO.Name
+			};
+			Request.Manager = manager;
+		}
+	}
+
+	private void SelectActFileType(ChangeEventArgs e)
+	{
+		if (int.TryParse(e.Value.ToString(), out int selectedValue))
+		{
+			Request.WorkResultType = (Domain.enums.DoneWorkActType)selectedValue;
+			StateHasChanged();
+		}
+	}
+
+	private void SelectRequestStatus(ChangeEventArgs e)
+	{
+		if (int.TryParse(e.Value.ToString(), out int selectedValue))
+		{
+			Request.Status = (Domain.enums.Status)selectedValue;
+			StateHasChanged();
+		}
+	}
+
+	private bool isWrongClient = false;
+	private bool isWrongManager = false;
+
+	private async void SaveEditApply()
+	{
+		LoadingService.ShowLoading();
+
+		if (Validate())
+			return;
+
+		try
+		{
+			if (Type == CreateEditPageType.Create)
+			{
+				Request = await Mediator.Send(new CreateRequestCommand()
+				{
+					ClientId = Request.Client.ClientId,
+					Date = DateTime.Now,
+					ReasonRequest = Request.ReasonRequest,
+					NecessaryFunds = Request.NecessaryFunds,
+					ManagerId = Request.Manager.ManagerId,
+					InternalInfo = Request.InternalInfo,
+					Status = Request.Status,
+					ActFilePath = Request.ActFilePath,
+					WorkResultType = Request.WorkResultType,
+					Document = Request.Document
+				});
+			}
+			else if (Type == CreateEditPageType.Edit)
+			{
+				Request = await Mediator.Send(new UpdateRequestCommand()
+				{
+					Id = Request.RequestId,
+					Date = Request.Date,
+					ReasonRequest = Request.ReasonRequest,
+					NecessaryFunds = Request.NecessaryFunds,
+					ManagerId = Request.Manager.ManagerId,
+					InternalInfo = Request.InternalInfo,
+					Status = Request.Status,
+					ActFilePath = Request.ActFilePath,
+					WorkResultType = Request.WorkResultType,
+					Document = Request.Document
+				});
+			}
+
+			string mes = (Type == CreateEditPageType.Edit ? "Заявка обновлена" : "Заявка добавлена");
+			NotificationService.ShowSuccess(mes);
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+		}
+		finally
+		{
+			LoadingService.HideLoading();
+		}
+
+		await Close.InvokeAsync(Request);
+	}
+
+	private bool Validate()
+	{
+		if (Request.Client == default || Request.Client.ClientId == 0)
+		{
+			isWrongClient = true;
+			NotificationService.ShowError("Выберите клиента");
+			StateHasChanged();
+		}
+		else isWrongClient = false;
+		if (Request.Manager == default || Request.Manager.ManagerId == 0)
+		{
+			isWrongManager = true;
+			NotificationService.ShowError("Выберите  менеджера");
+			StateHasChanged();
+		}
+		else isWrongManager = false;
+
+		return isWrongClient || isWrongManager;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (Request == null)
+		{
+			Request = new();
+		}
+		if (Type == CreateEditPageType.Create)
+		{
+			Request.Status = Domain.enums.Status.AtWork;
+			Request.WorkResultType = Domain.enums.DoneWorkActType.Act;
+		}
+
+		if (Type == CreateEditPageType.Edit)
+		{
+			SelectedRequestStatus = ((int)Request.Status).ToString();
+			SelectedActType = ((int)Request.WorkResultType).ToString();
+		}
+
+		try
+		{
+			AllClients = await Mediator.Send(new GetClientSelectionDTOListQuery());
+			AllManagers = await Mediator.Send(new GetManagerListQuery());
+			isPageLoading = false;
+			StateHasChanged();
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Произошла ошибка при получение данных с сервера");
+		}
+
+		StateHasChanged();
+	}
+
+	private async Task ActFileChoose()
+	{
+		var res = await FilePicker.PickAsync();
+
+		if (res == null)
+			return;
+
+		var actFile = await File.ReadAllBytesAsync(res.FullPath);
+		Request.Document = new Document()
+		{
+			Title = res.FileName,
+			Extension = res.ContentType,
+			File = actFile
+		};
+		StateHasChanged();
+	}
+
+	private void ClearRequestDocument()
+	{
+		Request.Document = null;
+		StateHasChanged();
+	}
+}

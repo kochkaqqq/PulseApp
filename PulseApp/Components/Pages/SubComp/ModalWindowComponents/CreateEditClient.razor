@@ -1,0 +1,180 @@
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+@inject LoadingService Loading
+
+@using Domain
+@using PulseApp.Logic.enums
+@using MediatR	
+@using ApiClient.Client.Commands.UpdateClient
+@using Logic.Servicies
+@using ApiClient.Client.Commands.AddClient
+@using ApiClient.Exceptions
+@using ApiClient.Client.Commands.DeleteClient
+
+<div class="container">
+
+	<div class="row1">
+		<div>
+			@if (PageType == CreateEditPageType.Edit)
+			{
+				<h3>Клиент</h3>
+			}
+			else if (PageType == CreateEditPageType.Create)
+			{
+				<h3>Новый клиент</h3>
+			}
+		</div>
+
+		
+		<div class="buttons">
+		@if (PageType == CreateEditPageType.Edit)
+		{
+			<div class="tooltip-container">
+				<svg @onclick=DeleteClient xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+					<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+				</svg>
+				<span class="tooltip-text">Удалить</span>
+			</div>
+		}
+
+			<div class="tooltip-container">
+				<svg @onclick=CloseWindow xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="18" y1="6" x2="6" y2="18"></line>
+					<line x1="6" y1="6" x2="18" y2="18"></line>
+				</svg>
+				<span class="tooltip-text">Закрыть</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="row2">
+		<div class="form-floating mb-3">
+			<input class="form-control @(isWrongName ? "red-alert" : "")" id="floatingInput" @bind-value="Client.Name" autocomplete="off">
+			<label for="floatingInput">Имя</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Client.Contact" autocomplete="off">
+			<label for="floatingInput">Контакт</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Client.EMail" autocomplete="off">
+			<label for="floatingInput">Электронная почта</label>
+		</div>
+
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Client.Phone" autocomplete="off">
+			<label for="floatingInput">Телефон</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Client.Address" autocomplete="off">
+			<label for="floatingInput">Адрес</label>
+		</div>
+		<button class="save-button" @onclick=CreateUpdateClient>
+			@if (PageType == CreateEditPageType.Edit)
+			{
+				<p>Сохранить</p>
+			}
+			else if (PageType == CreateEditPageType.Create)
+			{
+				<p>Добавить</p>
+			}
+		</button>
+	</div>
+
+</div>
+
+@code {
+	[Parameter]
+	public CreateEditPageType PageType { get; set; }
+	[Parameter]
+	public EventCallback CloseWindow { get; set; }
+	[Parameter]
+	public Client Client { get; set; } = new();
+
+	private string value = "start value";
+
+	private bool isWrongName = false;
+
+	private async Task CreateUpdateClient()
+	{
+		Loading.ShowLoading();
+
+		if (!Validate()) return;
+
+		try
+		{
+			if (PageType == CreateEditPageType.Edit)
+			{
+				Client = await Mediator.Send(new UpdateClientCommand()
+				{
+					ClientId = Client.ClientId,
+					Name = Client.Name,
+					Address = Client.Address,
+					Email = Client.EMail,
+					Phone = Client.Phone,
+					Contact = Client.Contact
+				});
+			}
+			else if (PageType == CreateEditPageType.Create)
+			{
+				Client = await Mediator.Send(new AddClientCommand()
+				{
+					Name = Client.Name,
+					Address = Client.Address,
+					Email = Client.EMail,
+					Phone = Client.Phone,
+					Contact = Client.Contact
+				});
+			}
+
+			string mes = (PageType == CreateEditPageType.Edit ? "Клиент обновлен" : "Клиент добавлен");
+			NotificationService.ShowSuccess(mes);
+			await CloseWindow.InvokeAsync();
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+		}
+		catch (DeserializeException)
+		{
+			NotificationService.ShowError("Сервер вернул некорректные данные. Обратитесь к админу");
+		}
+
+		Loading.HideLoading();
+	}
+
+	private bool Validate()
+	{
+		if (Client.Name == string.Empty)
+		{
+			isWrongName = true;
+			NotificationService.ShowError("Введите имя клиента");
+			StateHasChanged();
+			return false;
+		}
+
+		isWrongName = false;
+		return true;
+	}
+
+	private async Task DeleteClient()
+	{
+		Loading.ShowLoading();
+
+		try
+		{
+			await Mediator.Send(new DeleteClientCommand() { ClientId = Client.ClientId });
+			NotificationService.ShowSuccess($"Клиент {Client.Name} успешно удален. \nДля его востановления обратитесь к админу");
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Произошла серверная ошибка. \nПроверьте подключение к интернету");
+		}
+
+		Loading.HideLoading();
+	}
+}

@@ -1,0 +1,31 @@
+﻿@using Logic.enums
+
+@if (isShowModal)
+{
+	<ModalWindow WindowType=@ModalWindowType.ExistingClient Entity=@Client IsOpen=@isShowModal ModalWindowWidth=60 OnClose=@SwitchModal />
+}
+
+@if (IsLink)
+{
+	<a @onclick=SwitchModal class="entity-link" ><String value=@Client.Name ></String></a>
+}
+else
+{
+	<String value=@Client.Name ></String>
+}
+
+@code {
+	[Parameter]
+	public bool IsLink { get; set; } = true;
+	[Parameter]
+	public Domain.Client Client { get; set; }
+
+	private bool isShowModal = false;
+
+	private void SwitchModal()
+	{
+		isShowModal = !isShowModal;
+	}
+}
+
+

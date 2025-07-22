@@ -1,0 +1,52 @@
+﻿@inject NavigationManager NavigationManager
+
+@if (Element != null)
+{
+	@if (Element is Domain.Client client)
+	{
+		<tr @onclick=ClickOnElem>
+			<PulseApp.Components.Pages.SubComp.Lists.ElemPresentation.ClientElemList ClientDTO=@(new Domain.DTO.ClientListElementDTO() 
+			{ 
+				ClientId = client.ClientId, 
+				Name = client.Name, 
+				Contact = client.Contact
+			})
+			Properties=@(new List<string>() {"Id", "Name", "Contact"}) />
+		</tr>
+	}
+	else if (Element is Domain.DTO.RequestListElementDTO request)
+	{
+		<tr>
+			<PulseApp.Components.Pages.SubComp.Lists.ElemPresentation.RequestElemList Request=@(request)
+				Properties=@(new() { "№", "Дата", "Работы закончены", "Клиент", "Причина вызова" }) />
+		</tr>
+	}
+	else if (Element is Domain.DTO.ExperienceListElementDTO experienceDTO)
+	{
+		<tr>
+			<PulseApp.Components.Pages.SubComp.Lists.ElemPresentation.ExperienceElemList ExperienceDTO=@(experienceDTO)
+			Properties=@(new() { "Дата", "Клиент", "Причина", "Начало", "Сотрудники", "План работ" }) />
+		</tr>
+	}
+	else if (Element is Domain.DTO.ClientListElementDTO clientDTO)
+	{
+		<tr>
+			<PulseApp.Components.Pages.SubComp.Lists.ElemPresentation.ClientElemList 
+				ClientDTO=@clientDTO
+				Properties=@(new() { "Id", "Name", "Contact" }) />
+		</tr>
+	}
+}
+
+@code {
+	[Parameter]
+	public object Element { get; set; }
+
+	[Parameter]
+	public EventCallback OnElementClick { get; set; }
+
+	private async void ClickOnElem()
+	{
+		await OnElementClick.InvokeAsync(Element);
+	}
+}

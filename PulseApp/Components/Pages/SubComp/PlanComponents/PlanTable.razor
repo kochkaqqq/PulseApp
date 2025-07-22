@@ -1,0 +1,61 @@
+@using MediatR
+@using Logic.Servicies
+@using Domain.DTO
+@using Domain.DTO.Experiences
+@using ApiClient.Experience.Queries.GetExperiencePlanDTOList
+
+@inject IMediator Mediator
+@inject NotificationService Notification
+@inject LoadingService LoadingService
+
+<table>
+	<tr>
+		<th scope="col">Дата</th>
+		<th scope="col">Объект</th>
+		<th scope="col">Время</th>
+		<th scope="col">Сотрудники</th>
+		<th scope="col">Причина</th>
+		<th scope="col">План работ</th>
+	</tr>
+	@foreach (var exp in Experiences)
+	{
+		<tr>
+			<th><PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@exp.Date IsDateShow=@true /></th>
+			<th><PulseApp.Components.Pages.SubComp.TypePresentation.String value=@exp.ClientName /></th>
+			@if (exp.StartTime == null)
+			{
+				<th><p>--/--</p></th>
+			}
+			else
+			{
+				<th><PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@exp.StartTime.Value IsDateShow=@false /></th>
+			}
+			<th><p>@exp.WorkerList</p></th>
+			<th><p>@exp.ReasonRequest</p></th>
+			<th><p>@exp.WorkPlan</p></th>
+		</tr>
+	}
+</table>
+
+@code {
+	[Parameter, EditorRequired]
+	public DateTime Date { get; set; }
+
+	private List<ExperiencePlanDTO> Experiences { get; set; } = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		LoadingService.ShowLoading();
+
+		try
+		{
+			Experiences = await Mediator.Send(new GetExperiencePlanDTOListQuery() { Date = Date });
+		}
+		catch (HttpRequestException)
+		{
+			Notification.ShowError("Произошла ошибка, проверьте подключение к интернету");
+		}
+
+		LoadingService.HideLoading();
+	}
+}

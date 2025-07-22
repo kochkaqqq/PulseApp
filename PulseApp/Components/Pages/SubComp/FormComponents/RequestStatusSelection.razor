@@ -1,0 +1,52 @@
+<div class="form-floating mb-3">
+	<select class="form-select" id="floatingSelect" aria-label="Floating label select example" @bind=SelectedRequestStatus>
+		<option value="1">В работе</option>
+		<option value="2">Отложена</option>
+		<option value="3">Завершена</option>
+		<option value="0">Не выбрано</option>
+	</select>
+	<label for="floatingSelect">Выберете статус заявки</label>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public EventCallback<Domain.enums.Status> SelectStatus { get; set; }
+
+	[Parameter]
+	public Domain.enums.Status PreSelectedStatus { get; set; } = Domain.enums.Status.None;
+
+	protected override void OnInitialized()
+	{
+		if (PreSelectedStatus == Domain.enums.Status.AtWork)
+			selectedRequestStatus = "1";
+		else if (PreSelectedStatus == Domain.enums.Status.Postponed)
+			selectedRequestStatus = "2";
+		else if (PreSelectedStatus == Domain.enums.Status.Finished)
+			selectedRequestStatus = "3";
+		else
+			selectedRequestStatus = "0";
+
+		StateHasChanged();
+	}
+
+	private string selectedRequestStatus = "";
+	private string SelectedRequestStatus
+	{
+		get
+		{
+			return selectedRequestStatus;
+		}
+		set
+		{
+			selectedRequestStatus = value;
+			if (value == "1")
+				SelectStatus.InvokeAsync(Domain.enums.Status.AtWork);
+			else if (value == "2")
+				SelectStatus.InvokeAsync(Domain.enums.Status.Postponed);
+			else if (value == "3")
+				SelectStatus.InvokeAsync(Domain.enums.Status.Finished);
+			else
+				SelectStatus.InvokeAsync(Domain.enums.Status.None);
+		}
+	}
+}

@@ -1,0 +1,71 @@
+@using Domain 
+@using PulseApp.Logic.enums
+@using Domain.DTO
+@using MediatR
+@using Logic.Servicies
+@using ApiClient.Experience.Queries.GetExperience
+
+@inject IMediator Mediator
+@inject LoadingService LoadingService
+@inject NotificationService NotificationService
+
+@if (isShowExperience)
+{
+	<ModalWindow Entity=@experience WindowType=@ModalWindowType.ExistingExperience IsOpen=@isShowExperience ModalWindowWidth=80 OnClose=@SwitchModal />
+}
+
+@if (ExperienceDTO != null)
+{
+	foreach (var prop in Properties)
+	{
+		<td @onclick=SwitchModal>
+			@switch (prop)
+			{
+				case "Дата":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@ExperienceDTO.Date IsDateShow=@true />
+					break;
+				case "Клиент":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ExperienceDTO.ClientName />
+					break;
+				case "Причина":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ExperienceDTO.ReasonRequest />
+					break;
+				case "Начало":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@(ExperienceDTO.StartTime == null ? null : ExperienceDTO.StartTime.Value) IsDateShow=@false />
+					break;
+				case "Сотрудники":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ExperienceDTO.WorkerList />
+					break;
+				case "План работ":
+					<PulseApp.Components.Pages.SubComp.TypePresentation.String value=@ExperienceDTO.WorkPlan />
+					break;
+				default:
+					break;
+			}
+		</td>
+	}
+}
+
+@code {
+	[Parameter]
+	public ExperienceListElementDTO ExperienceDTO { get; set; }
+	[Parameter]
+	public List<string> Properties { get; set; }
+
+	private bool isShowExperience = false;
+
+	private async Task SwitchModal()
+	{
+		try
+		{
+			experience = await Mediator.Send(new GetExperienceQuery() { ExperienceId = ExperienceDTO.ExperienceId });
+			isShowExperience = !isShowExperience;
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Нет ответа от сервера, проверьте подключение к интернету");
+		}
+	}
+
+	private Experience experience = null;
+}

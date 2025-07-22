@@ -1,0 +1,129 @@
+@page "/experiencies/{page}/{filter?}"
+
+@using Domain
+@using Domain.Filters
+@using MediatR
+@using Logic.Servicies
+@using System.Text.Json
+@using ApiClient.Exceptions
+@using Domain.DTO
+@using ApiClient.Experience.Queries.GetExperinceList
+@using System.Web
+@using System.Text
+
+@inject NavigationManager NavigationManager
+@inject LoadingService LoadingService
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+
+@if (isLoading)
+{
+	<p>Loading...</p>
+}
+else if (isServerProblem)
+{
+	<p>Нет ответа от сервера; проверьте подключение к интернету</p>
+}
+else
+{
+	<PulseApp.Components.Pages.SubComp.Lists.List Entities=@Entities Headers=@Headers Filter=@(new Logic.Filters.FilterBase() {ExperienceFilter = filter})
+	CurrentPage=@currentPage ListComponentType=@Logic.enums.ListComponentType.Experience PageChanged=@PageChanged OnFilterChange=@FilterChanged 
+	PageQuantity=@(pageQuantity % 25 == 0 ? pageQuantity / 25 : pageQuantity / 25 + 1) UpdateList=@UpdateExperienceList />
+}
+
+@if (isShowModal)
+{
+	<PulseApp.Components.Pages.SubComp.ModalWindow WindowType=@Logic.enums.ModalWindowType.NewExperience IsOpen=@isShowModal OnClose=SwitchModal ModalWindowWidth=55 />
+}
+
+<button class="fixed-button" @onclick=@(() => isShowModal = true)>+ Добавить</button>
+
+@code {
+	[Parameter]
+	public string Page { get; set; }
+	[Parameter]
+	public string? Filter { get; set; }
+
+	private int pageQuantity = 0;
+	private int currentPage = 1;
+
+	private ExperienceFilter filter = new();
+
+	private bool isLoading = true;
+	private bool isServerProblem = false;
+
+	private List<ExperienceListElementDTO> ExperienceList;
+	private List<object> Entities;
+	private List<string> Headers = new() { "Дата", "Клиент", "Причина", "Начало", "Сотрудники", "План работ" };
+
+	protected override async Task OnInitializedAsync()
+	{
+		currentPage = int.Parse(Page);
+		if (Filter != null && Filter != string.Empty)
+		{
+			var jsonBytes = Convert.FromBase64String(Filter);
+			var filterJson = Encoding.UTF8.GetString(jsonBytes);
+
+			//var filterString = Uri.UnescapeDataString(Filter);
+			filter = JsonSerializer.Deserialize<ExperienceFilter>(filterJson, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }) ??
+				throw new DeserializeException(nameof(ExperienceFilter), filterJson);
+		}
+
+		try
+		{
+			var listAndCount = await Mediator.Send(new GetExperinceListQuery() { Page = currentPage, ExperienceFilter = filter });
+			ExperienceList = listAndCount.Item1;
+			pageQuantity = listAndCount.Item2;
+			Entities = ExperienceList.Cast<object>().ToList();
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку, проверьте подключение к интернету");
+			isServerProblem = true;
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
+
+	private void PageChanged(int pageNum)
+	{
+		NavigationManager.NavigateTo($"/experiencies/{pageNum}/{Filter}", true);
+	}
+
+	private void FilterChanged()
+	{
+		var newFilter = JsonSerializer.Serialize(filter);
+		newFilter = Convert.ToBase64String(Encoding.UTF8.GetBytes(newFilter));
+		//newFilter = Uri.EscapeDataString(newFilter);
+		NavigationManager.NavigateTo($"/experiencies/1/{newFilter}", true);
+	}
+
+	private bool isShowModal = false;
+	private void SwitchModal()
+	{
+		isShowModal = !isShowModal;
+		NavigationManager.Refresh(true);
+	}
+
+	private async Task UpdateExperienceList()
+	{
+		LoadingService.ShowLoading();
+		try
+		{
+			var listAndCount = await Mediator.Send(new GetExperinceListQuery() { Page = currentPage + 1, ExperienceFilter = filter });
+			ExperienceList.AddRange(listAndCount.Item1);
+			pageQuantity = listAndCount.Item2;
+			Entities = ExperienceList.Cast<object>().ToList();
+			currentPage += 1;
+		}
+		catch
+		{
+			NotificationService.ShowError("Сервер вернул ошибку, проверьте подключение к интернету");
+			isServerProblem = true;
+		}
+		LoadingService.HideLoading();
+	}
+}

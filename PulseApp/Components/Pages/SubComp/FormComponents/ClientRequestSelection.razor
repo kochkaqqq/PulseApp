@@ -1,0 +1,66 @@
+@using Domain
+@using Domain.DTO.Clients
+@using Domain.DTO.Requests
+
+<div>
+	<Selection Label="Клиент" Entities=@(Clients.Cast<object>().ToList()) SelectedEntity=@clientSelectionText SelectEntityCallback=@SelectClient Placeholder="Выберите клиента" />
+
+	<Selection SelectedEntity=@requestSelectionText @key="FiltredRequest" Label="Заявка" Entities=@(FiltredRequest.Cast<object>().ToList()) SelectEntityCallback=@SelectRequest Placeholder="Выберите заявку" />
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public EventCallback<RequestSelectionDTO> SetRequest { get; set; }
+	[Parameter, EditorRequired]
+	public List<ClientSelectionDTO> Clients { get; set; }
+	[Parameter, EditorRequired]
+	public List<RequestSelectionDTO> Requests { get; set; }
+	[Parameter]
+	public EventCallback<ClientSelectionDTO> SetClientForFilter { get; set; }
+
+	private List<RequestSelectionDTO> FiltredRequest;
+
+	[Parameter]
+	public string clientSelectionText { get; set; } = "";
+	[Parameter]
+	public string requestSelectionText { get; set; } = "";
+
+	private async Task SelectClient(object client)
+	{
+		var c = client as ClientSelectionDTO;
+		await SetClientForFilter.InvokeAsync(c);
+		if (c != null)
+		{
+			clientSelectionText = c.ToString();
+			FiltredRequest = Requests.Where(r => r.ClientId == c.ClientId).ToList();
+		}
+		else
+		{
+			clientSelectionText = string.Empty;
+			FiltredRequest = Requests;
+		}
+		StateHasChanged();
+	}
+
+	private async Task SelectRequest(object request)
+	{
+		var req = request as RequestSelectionDTO;
+		if (req != null)
+		{
+			requestSelectionText = req.RequestTitle;
+			clientSelectionText = req.ClientName;
+		}
+		else
+		{
+			requestSelectionText = string.Empty;
+			clientSelectionText = string.Empty;
+		}
+		StateHasChanged();
+		await SetRequest.InvokeAsync(req);
+	}
+
+	protected override void OnInitialized()
+	{
+		FiltredRequest = Requests;
+	}
+}

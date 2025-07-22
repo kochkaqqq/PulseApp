@@ -1,0 +1,338 @@
+@using Domain
+@using MediatR
+@using Logic.Servicies
+@using ApiClient.Report.Queries.GetReportListByExperience
+@using ApiClient.Experience.Commands.UpdateExperience
+@using ApiClient.Experience.Commands.DeleteExperience
+
+@inject LoadingService LoadingService
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+@inject NavigationManager NavigationManager
+
+@if (isShowDeleteWindow)
+{
+    <DialogWindow Message=@deleteMessage OnCancel=@(() => isShowDeleteWindow = false) OnOk=@DeleteExperience />
+}
+
+@if (isPageLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    @if (isShowModal)
+    {
+        <ModalWindow IsOpen=isShowModal OnClose=SwitchModal Entity=@Experience WindowType=@Logic.enums.ModalWindowType.UpdateExperience ModalWindowWidth="55" />
+    }
+
+    <div class="main-container standart-cursor" >
+        <div class="row1">
+            <h2>Выезд №@Experience.ExperienceId</h2>
+            <div class="buttons">
+                <div class="tooltip-container">
+                    <svg @onclick=SwitchModal xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon>
+                    </svg>
+                    <span class="tooltip-text">Редактировать</span>
+                </div>
+
+                <div class="tooltip-container">
+					<svg @onclick=@(() => isShowDeleteWindow = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+						<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+					</svg>
+					<span class="tooltip-text">Удалить</span>
+				</div>
+
+                <div class="tooltip-container">
+                    <svg @onclick=Close xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span class="tooltip-text">Закрыть</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row2">Информация</div>
+        <div class="row3">
+            <table>
+                <colgroup>
+                    <col>
+                    <col>
+                </colgroup>
+                <tr>
+                    <td>Клиент</td>
+                    <td><PulseApp.Components.Pages.SubComp.TypePresentation.ClientPrew Client=@Experience.Request.Client /></td>
+                </tr>
+
+                <tr>
+                    <td>Заяка</td>
+                    <td><PulseApp.Components.Pages.SubComp.TypePresentation.RequestPrew Request=@Experience.Request /></td>
+                </tr>
+
+                <tr>
+                    <td>Старший сотрудник</td>
+                    <td><PulseApp.Components.Pages.SubComp.TypePresentation.WorkerPrew Worker=@Experience.MainWorker /></td>
+                </tr>
+
+                <tr>
+                    <td>Сотрудники</td>
+                    <td><PulseApp.Components.Pages.SubComp.TypePresentation.WorkerListPrew Workers=@Experience.Workers /></td>
+                </tr>
+
+                <tr>
+                    <td>Дата</td>
+                    <td><input type="date" @bind-value=@Experience.Date @onblur=@(() => microExperienceUpdate(nameof(Experience.Date))) /></td>
+                </tr>
+
+                <tr>
+                    <td>Гарантия</td>
+                    <td>
+                        <input type="checkbox" checked=@(Experience.Garant) id="garantCheckbox" name="garantCheckbox" @onchange=@((e) => CheckBoxChanged(e, nameof(Experience.Garant))) />
+                        <label for="garantCheckbox">Гарантия</label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>План работ</td>
+                    <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Experience.WorkPlan @onblur=@(() => microExperienceUpdate(nameof(Experience.WorkPlan))) /></td>
+                </tr>
+
+                <tr>
+                    <td>Выполненные работы</td>
+                    <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Experience.DoneWork @onblur=@(() => microExperienceUpdate(nameof(Experience.DoneWork))) /></td>
+                </tr>
+
+                <tr>
+                    <td>Использованные материалы</td>
+                    <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Experience.UsedMaterials @onblur=@(() => microExperienceUpdate(nameof(Experience.UsedMaterials))) /></td>
+                </tr>
+
+                <tr>
+                    <td>Работы выполнены</td>
+                    <td>
+                        <input type="checkbox" checked=@(Experience.IsWorkDone) id="isWorkDoneCheckbox" name="isWorkDoneCheckbox" @onchange=@((e) => CheckBoxChanged(e, nameof(Experience.IsWorkDone))) />
+                        <label for="isWorkDoneCheckbox">Работы выполнены</label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Что необходимо доделать</td>
+                    <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Experience.RemainWork @onblur=@(() => microExperienceUpdate(nameof(Experience.RemainWork))) /></td>
+                </tr>
+
+                <tr>
+                    <td>Чистое рабочее место</td>
+                    <td>
+                        <input type="checkbox" checked=@(Experience.IsWorkPlaceClean) id="workPlace" name="workPlace" @onchange=@((e) => CheckBoxChanged(e, nameof(Experience.IsWorkPlaceClean))) />
+                        <label for="workPlace">Чистое рабочее место</label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Работы приняты заказчиком</td>
+                    <td>
+                        <input type="checkbox" checked=@(Experience.IsTaskAccepted) id="isAcceptedCheckbox" name="isAcceptedCheckbox" @onchange=@((e) => CheckBoxChanged(e, nameof(Experience.IsTaskAccepted))) />
+                        <label for="isAcceptedCheckbox">Работы приняты заказчиком</label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Запланированное начало работ</td>
+                    <td>
+                        <input type="time" value=@(Experience.TimeStart == null ? "" : Experience.TimeStart.Value.ToString("HH:mm")) @onchange="(e) => {OnTimeChanged(e, nameof(Experience.TimeStart)); StateHasChanged();}" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Запланированный конец работ</td>
+                    <td>
+                        <input type="time" value=@(Experience.TimeEnd == null ? "" : Experience.TimeEnd.Value.ToString("HH:mm")) @onchange="(e) => {OnTimeChanged(e, nameof(Experience.TimeEnd)); StateHasChanged();}" />
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+
+    @foreach (var report in Experience.Reports)
+    {
+        <PulseApp.Components.Pages.SubComp.TypePresentation.ReportPrew Report=@report />
+    }
+}
+
+@code {
+    private bool isPageLoading = true; 
+    private bool isShowModal = false;
+    private bool isShowDeleteWindow = false;
+    private void SwitchModal()
+    {
+        isShowModal = !isShowModal;
+        StateHasChanged();
+    }
+
+    private string deleteMessage = "Вы действительно хотите удалить выезд?";
+
+    [Parameter]
+    public Experience Experience { get; set; }
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        LoadingService.ShowLoading();
+
+        try
+        {
+            Experience.Reports = await Mediator.Send(new GetReportListByExperienceQuery() { ExperinceId = Experience.ExperienceId });
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Нет ответа от сервера, проверьте подключение к интернету");
+        }
+
+        LoadingService.HideLoading();
+        isPageLoading = false;
+        StateHasChanged();
+    }
+
+    private Dictionary<string, bool> IsPropertyChanged = new();
+
+    protected override void OnInitialized()
+    {
+        IsPropertyChanged.Add(nameof(Experience.Date), false);
+        IsPropertyChanged.Add(nameof(Experience.WorkPlan), false);
+        IsPropertyChanged.Add(nameof(Experience.DoneWork), false);
+        IsPropertyChanged.Add(nameof(Experience.UsedMaterials), false);
+        IsPropertyChanged.Add(nameof(Experience.IsWorkDone), false);
+        IsPropertyChanged.Add(nameof(Experience.RemainWork), false);
+        IsPropertyChanged.Add(nameof(Experience.IsWorkPlaceClean), false);
+        IsPropertyChanged.Add(nameof(Experience.IsTaskAccepted), false);
+        IsPropertyChanged.Add(nameof(Experience.TimeStart), false);
+        IsPropertyChanged.Add(nameof(Experience.TimeEnd), false);
+
+        if (Experience != null)
+            deleteMessage = $"Вы действительно хотите удалить выезд {Experience.ExperienceId}?";
+    }
+
+    private void OpenPropEditor(string propName)
+    {
+        foreach (var pair in IsPropertyChanged)
+        {
+            if (pair.Key == propName)
+            {
+                IsPropertyChanged[pair.Key] = true;
+            }
+            else
+            {
+                if (pair.Value)
+                    microExperienceUpdate(propName);
+                else 
+                    IsPropertyChanged[pair.Key] = false;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task microExperienceUpdate(string propName)
+    {
+        IsPropertyChanged[propName] = false;
+
+        var command = new UpdateExperienceCommand() { ExperienceId = Experience.ExperienceId };
+
+        switch (propName)
+        {
+            case nameof(Experience.Date):
+                command.Date = Experience.Date;
+                break;
+            case nameof(Experience.Garant):
+                command.Garant = Experience.Garant;
+                break;
+            case nameof(Experience.WorkPlan):
+                command.WorkPlan = Experience.WorkPlan;
+                break;
+            case nameof(Experience.DoneWork):
+                command.DoneWork = Experience.DoneWork;
+                break;
+            case nameof(Experience.UsedMaterials):
+                command.UsedMaterials = Experience.UsedMaterials;
+                break;
+            case nameof(Experience.IsWorkDone):
+                command.IsWorkDone = Experience.IsWorkDone;
+                break;
+            case nameof(Experience.RemainWork):
+                command.RemainWork = Experience.RemainWork;
+                break;
+            case nameof(Experience.IsWorkPlaceClean):
+                command.IsWorkPlaceClean = Experience.IsWorkPlaceClean;
+                break;
+            case nameof(Experience.IsTaskAccepted):
+                command.IsTaskAccepted = Experience.IsTaskAccepted;
+                break;
+            case nameof(Experience.TimeStart):
+                command.TimeStart = Experience.TimeStart;
+                break;
+            case nameof(Experience.TimeEnd):
+                command.TimeEnd = Experience.TimeEnd;
+                break;
+        }
+
+        try
+        {
+            await Mediator.Send(command);
+            NotificationService.ShowSuccess("Выезд обновлен");
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Ошибка! Выезд НЕ обновлен");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CheckBoxChanged(ChangeEventArgs e, string propName)
+    {
+        var type = Experience.GetType();
+        var propInfo = type.GetProperty(propName);
+
+        propInfo.SetValue(Experience, e.Value, null);
+        await microExperienceUpdate(propName);
+    }
+
+    private async Task OnTimeChanged(ChangeEventArgs e, string propName)
+    {
+        var hMM = ((string)e.Value).Split(":");
+
+        var time = new DateTime(2025, 5, 18, int.Parse(hMM[0]), int.Parse(hMM[1]), 0);
+
+        var type = Experience.GetType();
+        var propInfo = type.GetProperty(propName);
+
+        propInfo.SetValue(Experience, time, null);
+        await microExperienceUpdate(propName);
+    }
+
+    private async Task DeleteExperience()
+    {
+        LoadingService.ShowLoading();
+        try
+        {
+            await Mediator.Send(new DeleteExperienceCommand() {ExperienceId = Experience.ExperienceId});
+            LoadingService.HideLoading();
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+        }
+        catch
+        {
+            NotificationService.ShowError("Произошла непредвиденная ошибка, обратитесь к администратору");
+        }
+        finally
+        {
+            LoadingService.HideLoading();
+        }
+    }
+}

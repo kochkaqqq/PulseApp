@@ -1,0 +1,191 @@
+﻿@using Domain
+@using PulseApp.Logic.enums
+@using Logic.Filters
+@using PulseApp.Logic.Filters.ApplyFilter
+@using Domain.DTO
+
+<div>
+	@if (isShowFilterPanel)
+	{
+		<PulseApp.Components.Pages.SubComp.Filters.FilterPanel Filter=@Filter Type=@filterPanelType IsOpen=@isShowFilterPanel Close=CloseFilterPanel />
+	}
+
+	<div class="search-block-container">
+		<div class="search-container">
+			<!-- Поле ввода -->
+			<input type="text" class="search-input" placeholder="Поиск...">
+			<!-- Значок лупы -->
+			<i class="search-icon">🔍</i>
+		</div>
+		<button @onclick=@(() => isShowFilterPanel = true) class="filter-button" >Фильтры</button>
+	</div>
+
+	@if (ListComponentType == ListComponentType.Request)
+	{
+		<ListPageTitle RequestFilter=@Filter.RequestFilter />
+	}
+	else if (ListComponentType == ListComponentType.Experience)
+	{
+		<ListPageTitle ExperienceFilter=@Filter.ExperienceFilter />
+	}
+
+	<div>
+		<table class="main-table">
+			<ListHeader Columns=@Headers ></ListHeader>
+			<tbody>
+				@if (Entities != null)
+				{
+					@foreach (var elem in Entities)
+					{
+						<ListElem Element=@elem OnElementClick=ShowModal />
+					}
+				}
+				else
+				{
+					<tr>
+						<td>
+							<label>-//-</label>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+
+		@if (isShowLoadMore)
+		{
+			<div class="load-more-container">
+				<button class="load-more-button" id="loadMoreBtn" @onclick=@(async () => await LoadMore())>
+					Показать еще
+				</button>
+			</div>
+		}
+		else
+		{
+			<div class="load-more-container">
+				<p>Загрузка...</p>
+			</div>
+		}
+	</div>
+
+	<!--
+	<div class="pagination-container">
+	@foreach (var i in GetPageButtonList())
+	{
+	var pageNumber = i;
+	<button class="pagination-button 
+				@(i == 1 ? "first-button" : i == PageQuantity ? "last-button" : "") 
+				@(i == CurrentPage ? "current-page" : "")"
+	@onclick="() => GoToPage(pageNumber)">
+
+		@i
+
+	</button>
+	}
+	</div>
+	-->
+</div>
+
+@code {
+	[Parameter]
+	public ListComponentType ListComponentType { get; set; }
+	[Parameter]
+	public List<object> Entities { get; set; }
+	[Parameter]
+	public List<string> Headers { get; set; }
+	[Parameter]
+	public FilterBase Filter { get; set; }
+	[Parameter]
+	public int PageQuantity { get; set; }
+	[Parameter]
+	public int CurrentPage { get; set; } = 1;
+	[Parameter]
+	public EventCallback<int> PageChanged { get; set; }
+	[Parameter]
+	public EventCallback OnFilterChange { get; set; }
+	[Parameter]
+	public EventCallback UpdateList { get; set; }
+
+	//Open Entity modal
+	private bool isShowModal = false;
+
+	private bool isShowLoadMore = true;
+
+	private void ShowModal(object entity)
+	{
+		ClickedElement = entity;
+		isShowModal = true;
+	}
+
+	private void HideModal()
+	{
+		//TODO Add page refrash
+		isShowModal = false;
+	}
+	//End of open Entity modal
+
+	//Open Filter Panel
+	private bool isShowFilterPanel = false;
+	private async Task CloseFilterPanel()
+	{
+		isShowFilterPanel = false;
+		await OnFilterChange.InvokeAsync();
+	}
+	//End of open filter panel
+
+	//Clicked element from list
+	private object ClickedElement;
+
+	private ModalWindowType openingModalWindowType;
+	private FilterPanelType filterPanelType;
+
+	protected override void OnInitialized()
+	{
+		if (ListComponentType == ListComponentType.Client)
+		{
+			openingModalWindowType = ModalWindowType.ExistingClient;
+			filterPanelType = FilterPanelType.Client;
+		}
+		else if (ListComponentType == ListComponentType.Request)
+		{
+			openingModalWindowType = ModalWindowType.ExistingRequest;
+			filterPanelType = FilterPanelType.Request;
+		}
+		else if (ListComponentType == ListComponentType.Experience)
+		{
+			openingModalWindowType = ModalWindowType.ExistingExperience;
+			filterPanelType = FilterPanelType.Experience;
+		}
+		//TODO Add other classes
+	}
+
+	private async Task GoToPage(int pageNum)
+	{
+		await PageChanged.InvokeAsync(pageNum);
+	}
+
+	private IEnumerable<int> GetPageButtonList()
+	{
+		if (PageQuantity <= 20)
+			return Enumerable.Range(1, PageQuantity);
+		else
+		{
+			if (CurrentPage >= 1 && CurrentPage <= 3)
+				return Enumerable.Range(1, 20);
+			else
+			{
+				var leftEdge = CurrentPage - 2;
+				var rightEdge = Math.Min(20, PageQuantity - CurrentPage);
+				return Enumerable.Range(leftEdge, rightEdge);
+			}
+		}
+	}
+
+	private async Task LoadMore()
+	{
+		isShowLoadMore = false;
+		StateHasChanged();
+		await UpdateList.InvokeAsync();
+		isShowLoadMore = true;
+		StateHasChanged();
+	}
+}

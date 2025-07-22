@@ -1,0 +1,51 @@
+﻿@using System.Threading.Tasks
+
+<div class="notification-container">
+    @foreach (var notification in Notifications)
+    {
+        <div class="notification @(notification.Type == NotificationType.Success ? "success" : "error")">
+            @notification.Message
+        </div>
+    }
+</div>
+
+@code {
+    public enum NotificationType
+    {
+        Success,
+        Error
+    }
+
+    public record NotificationItem(NotificationType Type, string Message, DateTime ExpireTime);
+
+    private List<NotificationItem> Notifications { get; set; } = new();
+
+
+    public void ShowSuccess(string message, int durationInSeconds = 5)
+    {
+        AddNotification(NotificationType.Success, message, durationInSeconds);
+    }
+
+    public void ShowError(string message, int durationInSeconds = 5)
+    {
+        AddNotification(NotificationType.Error, message, durationInSeconds);
+    }
+
+    private void AddNotification(NotificationType type, string message, int durationInSeconds)
+    {
+        var expireTime = DateTime.Now.AddSeconds(durationInSeconds);
+        var notification = new NotificationItem(type, message, expireTime);
+        Notifications.Add(notification);
+        StateHasChanged();
+
+        // Удаляем уведомление после истечения времени
+        Task.Delay(durationInSeconds * 1000).ContinueWith(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                Notifications.Remove(notification);
+                StateHasChanged();
+            });
+        });
+    }
+}

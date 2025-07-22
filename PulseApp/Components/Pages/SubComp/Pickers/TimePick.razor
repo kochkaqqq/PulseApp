@@ -1,0 +1,55 @@
+<!-- TimePicker.razor -->
+<div class="time-picker-container">
+    <div class="time-picker-header">
+        <span class="time-picker-title">@Header</span>
+    </div>
+    <div class="time-picker-body">
+        <div class="time-picker-hour">
+            <button class="time-picker-button" @onclick="DecrementHour">-</button>
+            <span class="time-picker-value">@(StartTime.Hour < 10 ? "0" + StartTime.Hour : StartTime.Hour.ToString())</span>
+            <button class="time-picker-button" @onclick="IncrementHour">+</button>
+        </div>
+        <span class="time-picker-separator">:</span>
+        <div class="time-picker-minute">
+            <button class="time-picker-button" @onclick="DecrementMinute">-</button>
+            <span class="time-picker-value">@(StartTime.Minute < 10 ? "0" + StartTime.Minute : StartTime.Minute.ToString())</span>
+            <button class="time-picker-button" @onclick="IncrementMinute">+</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Header { get; set; }
+    [Parameter]
+    public EventCallback<int> SetHours { get; set; }
+    [Parameter]
+    public EventCallback<int> SetMinutes { get; set; }
+    [Parameter]
+    public DateTime StartTime { get; set; } 
+
+    private async Task IncrementHour()
+    {
+        StartTime = StartTime.AddHours(1);
+        await SetHours.InvokeAsync(1);
+    }
+
+    private async Task DecrementHour()
+    {
+        StartTime = StartTime.AddHours(-1);
+        await SetHours.InvokeAsync(-1);
+    }
+
+    private async Task IncrementMinute()
+    {
+        StartTime = StartTime.AddMinutes(15);
+        await SetMinutes.InvokeAsync(15);
+    }
+
+    private async Task DecrementMinute()
+    {
+        StartTime = StartTime.AddMinutes(-15);
+        await SetMinutes.InvokeAsync(-15);
+    }
+}

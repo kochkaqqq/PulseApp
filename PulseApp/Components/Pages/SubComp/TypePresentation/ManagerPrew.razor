@@ -1,0 +1,15 @@
+@using Domain
+
+@if (Manager != null && Manager.ManagerId != 0)
+{
+	<String value=@Manager.Name />
+}
+else
+{
+	<p>-</p>
+}
+
+@code {
+	[Parameter]
+	public Manager Manager {get; set;}
+}

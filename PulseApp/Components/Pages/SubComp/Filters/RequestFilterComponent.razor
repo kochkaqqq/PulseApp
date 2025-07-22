@@ -1,0 +1,157 @@
+@using Domain.Filters
+@using Domain
+@using MediatR
+@using ApiClient.Client.Queries.GetClientSelectionDTOList
+@using ApiClient.Manager.Queries.GetManagerList
+@using Domain.DTO.Clients
+@using Domain.DTO
+@using Logic.Servicies
+
+@inject NotificationService NotificationService
+@inject IMediator Mediator
+
+@if (isPageLoading)
+{
+	<p>Loading...</p>
+}
+else
+{
+	<div>
+		<PulseApp.Components.Pages.SubComp.FormComponents.Selection Label="Клиент" Entities=@(AllClients.Cast<object>().ToList()) Placeholder="Выберите клиента..." SelectEntityCallback=@((entity) => SelectClient(entity))
+		SelectedEntity=@(Filter.ClientId == null ? "" : AllClients.FirstOrDefault(c => c.ClientId == Filter.ClientId)?.Name) />
+
+		<PulseApp.Components.Pages.SubComp.Pickers.DatePick IsSelectRange=@true 
+		SetFromDate=@((date) => Filter.FromDate = date) SetToDate=@((date) => Filter.ToDate = date) />
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Filter.ReasonRequest" />
+			<label for="floatingInput">Причина</label>
+		</div>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Filter.NecessaryFunds">
+			<label for="floatingInput">Необходимые средства</label>
+		</div>
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.Selection Label="Менеджер"
+		Entities=@(AllManagers.Cast<object>().ToList()) SelectEntityCallback=@((entity) => SelectManager(entity))
+		SelectedEntity=@(Filter.ManagerId == null ? "" : AllManagers.FirstOrDefault(m => m.Id == Filter.ManagerId)?.Name)
+		Placeholder="Выберите менеджера..."/>
+
+		<div class="form-floating mb-3">
+			<input class="form-control" id="floatingInput" @bind-value="Filter.InternalInfo">
+			<label for="floatingInput">Внутренняя информация</label>
+		</div>
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.RequestStatusSelection PreSelectedStatus=@Filter.Status SelectStatus=@((status) => Filter.Status = status) />
+
+		<div class="form-floating mb-3">
+			<select class="form-select" id="floatingSelect" aria-label="Floating label select example" @bind=SelectedActType>
+				<option value="0">Не важно</option>
+				<option value="1">Акт</option>
+				<option value="2">Производство</option>
+			</select>
+			<label for="floatingSelect">Тип акта выполненых работ</label>
+		</div>
+
+		<PulseApp.Components.Pages.SubComp.FormComponents.DoubleSelectionButtons IsFilter=@true LeftLabel="Акт НЕ прикреплен" RightLabel="Акт прикреплен"
+		SelectOption=@((flag) => Filter.IsDocAttached = flag)
+		PreSelectedOptionList=@(Filter.IsDocAttached == null ? new() {0, 1} : (Filter.IsDocAttached.Value ? new() {1} : new() {0})) />
+	</div>
+}
+
+@code {
+	private bool isPageLoading = true;
+
+	[Parameter]
+	public RequestFilter Filter { get; set; }
+
+	private string InputValue = string.Empty;
+
+	private bool isShowCalendar = false;
+
+	private List<ClientSelectionDTO> AllClients = new();
+	private List<ManagerDTO> AllManagers = new();
+
+	protected override async Task OnParametersSetAsync()
+	{
+		try
+		{
+			AllClients = await Mediator.Send(new GetClientSelectionDTOListQuery());
+			AllManagers = await Mediator.Send(new GetManagerListQuery());
+			isPageLoading = false;
+			StateHasChanged();
+		}
+		catch (HttpRequestException)
+		{
+			NotificationService.ShowError("Сервер вернул ошибку, проверте подключение к интернету");
+		}
+
+		SetSelectionValues();
+	}
+
+	private void SelectClient(object? obj)
+	{
+		if (obj is ClientSelectionDTO clientDTO)
+		{
+			Filter.ClientId = clientDTO.ClientId;
+		}
+		else
+			Filter.ClientId = null;
+	}
+
+	private void SelectManager(object? obj)
+	{
+		if (obj is ManagerDTO managerDTO)
+			Filter.ManagerId = managerDTO.Id;
+		else
+			Filter.ManagerId = null;
+	}
+
+	private void SetSelectionValues()
+	{
+		SelectedRequestStatus = ((int)Filter.Status).ToString();
+		SelectedActType = ((int)Filter.WorkResultType).ToString();
+	}
+
+	private string selectedRequestStatus = "";
+	private string SelectedRequestStatus
+	{
+		get
+		{
+			return selectedRequestStatus;
+		}
+		set
+		{
+			selectedRequestStatus = value;
+			if (value == "1")
+				Filter.Status = Domain.enums.Status.AtWork;
+			else if (value == "2")
+				Filter.Status = Domain.enums.Status.Postponed;
+			else if (value == "3")
+				Filter.Status = Domain.enums.Status.Finished;
+			else
+				Filter.Status = Domain.enums.Status.None;
+		}
+	}
+
+	private string selectedActType = "";
+	private string SelectedActType
+	{
+		get
+		{
+			return selectedActType;
+		}
+		set
+		{
+			selectedActType = value;
+			if (value == "1")
+				Filter.WorkResultType = Domain.enums.DoneWorkActType.Act;
+			else if (value == "2")
+				Filter.WorkResultType = Domain.enums.DoneWorkActType.Production;
+			else
+				Filter.WorkResultType = Domain.enums.DoneWorkActType.None;
+		}
+	}
+}
+

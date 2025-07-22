@@ -1,0 +1,148 @@
+@page "/requests/{page}/{filter?}"
+@using Domain
+@using Domain.Filters
+@using Logic.Servicies
+@using MediatR
+@using ApiClient.Request.Queries.GetRequestList
+@using System.Text.Json
+@using ApiClient.Exceptions
+@using Domain.DTO
+@using System.Text
+@using ApiClient.Client.Queries.GetClient
+
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
+@inject LoadingService LoadingService
+@inject IMediator Mediator
+
+@if (isLoading)
+{
+	<p>Loading...</p>
+}
+else if (isServerProblem)
+{
+	<p>Нет ответа от сервера; проверьте подключение к интернету</p>
+}
+else
+{
+	<PulseApp.Components.Pages.SubComp.Lists.List Entities=@Entities Headers=@Headers Filter=@(new Logic.Filters.FilterBase() { RequestFilter = requestFilter })
+	CurrentPage=@currentPage ListComponentType=@Logic.enums.ListComponentType.Request PageChanged=@OnPageChange OnFilterChange=@OnFilterChanged
+	PageQuantity=@(pageQuantity % 25 == 0 ? pageQuantity / 25 : pageQuantity / 25 + 1) UpdateList=@UpdateRequestList />
+}
+
+@if(isShowModal)
+{
+	<PulseApp.Components.Pages.SubComp.ModalWindow WindowType=@Logic.enums.ModalWindowType.NewRequest IsOpen=@isShowModal OnClose=SwitchModal ModalWindowWidth=55 />
+}
+
+<button class="fixed-button" @onclick=@(() => isShowModal = true)>+ Добавить</button>
+
+@code {
+	[Parameter]
+	public string Page { get; set; }
+	[Parameter]
+	public string? Filter { get; set; }
+
+	private int currentPage = 1;
+	private int pageQuantity;
+
+	private RequestFilter requestFilter = new();
+
+	private bool isLoading = true;
+	private bool isServerProblem = false;
+
+	private List<RequestListElementDTO> RequestList;
+	private List<object> Entities;
+	private List<string> Headers = new() { "№", "Дата", "Статус", "Клиент", "Причина вызова" };
+
+
+	protected override async Task OnInitializedAsync()
+	{
+		LoadingService.ShowLoading();
+
+		currentPage = int.Parse(Page);
+		if (Filter != null && Filter != string.Empty)
+		{
+			var filterBytes = Convert.FromBase64String(Filter);
+			var filterString = Encoding.UTF8.GetString(filterBytes);
+			requestFilter = JsonSerializer.Deserialize<RequestFilter>(filterString, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true }) ??
+				throw new DeserializeException(nameof(RequestFilter), filterString);
+		}
+
+		if (requestFilter.ClientId != null)
+		{
+			try
+			{
+				FilterClient = await Mediator.Send(new GetClientQuery() { ClientId = requestFilter.ClientId.Value });
+			}
+			catch (HttpRequestException)
+			{
+
+			}
+		}
+
+		try
+		{
+			var listAndCount = await Mediator.Send(new GetRequestListQuery() { Page = currentPage, PageEntitiesCount = 25, RequestFilter = requestFilter });
+			RequestList = listAndCount.Item1;
+			pageQuantity = listAndCount.Item2;
+			Entities = RequestList.Cast<object>().ToList();
+		}
+		catch (HttpRequestException)
+		{
+			isLoading = false;
+			isServerProblem = true;
+		}
+		catch (DeserializeException)
+		{
+			throw new Exception();
+		}
+
+		isLoading = false;
+		LoadingService.HideLoading();
+		StateHasChanged();
+	}
+
+	private bool isShowModal = false;
+	private void SwitchModal()
+	{
+		isShowModal = !isShowModal;
+		NavigationManager.Refresh(true);
+	}
+
+	private void OnPageChange(int pageNum)
+	{
+		NavigationManager.NavigateTo($"/requests/{pageNum}/{Filter}", true);
+	}
+
+	private void OnFilterChanged()
+	{
+		var filter = JsonSerializer.Serialize(requestFilter);
+		filter = Convert.ToBase64String(Encoding.UTF8.GetBytes(filter));
+		//filter = Uri.EscapeDataString(filter);
+
+		NavigationManager.NavigateTo($"/requests/1/{filter}", true);
+	}
+
+	private Client? FilterClient = null;
+
+	private async Task UpdateRequestList()
+	{
+		LoadingService.ShowLoading();
+
+		try
+		{
+			var listAndCount = await Mediator.Send(new GetRequestListQuery() { Page = currentPage + 1, PageEntitiesCount = 25, RequestFilter = requestFilter });
+			RequestList.AddRange(listAndCount.Item1);
+			pageQuantity = listAndCount.Item2;
+			Entities = RequestList.Cast<object>().ToList();
+			currentPage += 1;
+		}
+		catch
+		{
+			NotificationService.ShowError("Сервер вернул ошибку, проверьте подключение к интернету");
+		}
+
+		LoadingService.HideLoading();
+	}
+}

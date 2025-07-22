@@ -1,0 +1,45 @@
+﻿<style>
+	.StatusLabel {
+		border-radius: 8px;
+		font-weight: bold;
+		color: black;
+		padding: 0 10px;
+		cursor: pointer;
+	}
+</style>
+
+<label class="StatusLabel" style="background-color: @background" >
+	@status
+</label>
+
+@code {
+	[Parameter]
+	public Domain.enums.Status Status { get; set; }
+
+	private string status = "";
+	private string background = "";
+
+	protected override void OnInitialized()
+	{
+		if (Status == Domain.enums.Status.AtWork)
+		{
+			status = "в работе";
+			background = "red";
+		}
+		else if (Status == Domain.enums.Status.Finished)
+		{
+			status = "завершена";
+			background = "green";
+		}
+		else if (Status == Domain.enums.Status.Postponed)
+		{
+			status = "отложена";
+			background = "yeallow";
+		}
+		else
+		{
+			status = "Ошибка";
+			background = "blue";
+		}
+	}
+}

@@ -1,0 +1,486 @@
+@using Domain
+@using Logic.Servicies
+@using MediatR
+@using ApiClient.Request.Commands.UpdateRequestDocument
+@using System.Text.Json
+@using ApiClient.Request.Commands.UpdateRequest
+@using System.Text
+@using ApiClient.Request.Commands.AddRequestFile
+@using ApiClient.Request.Commands.RemoveRequestFile
+@using System.Reflection
+@using ApiClient.Request.Queries.DownloadDocument
+@using ApiClient.Request.Commands.RemoveRequestDocument
+@using System.Diagnostics
+@using System.IO
+@using ApiClient.Request.Commands.DeleteRequest
+
+@inject LoadingService LoadingService
+@inject NavigationManager NavigationManager
+@inject IMediator Mediator
+@inject NotificationService NotificationService
+
+@if (isShowDeleteWindow)
+{
+    <DialogWindow OnCancel=@(() => isShowDeleteWindow = false) OnOk=DeleteRequest Message=@deleteMessage  />
+}
+
+@if (isShowModal)
+{
+    <ModalWindow WindowType=@Logic.enums.ModalWindowType.UpdateRequest Entity=@Request IsOpen=@isShowModal ModalWindowWidth=55 OnClose=@CloseUpdateRequestWindow />
+}
+
+@if (isShowNewRequestModal)
+{
+    <ModalWindow OnClose=CloseNewRequestWindow Entity=@(new Experience() {Request = Request}) IsOpen=@isShowNewRequestModal 
+    ModalWindowWidth=55 WindowType=@Logic.enums.ModalWindowType.NewExperience />
+}
+
+<div class="container standart-cursor" >
+    <div class="row1">
+        <h2>Заявка №@Request.RequestId</h2>
+        <div class="buttons">
+            <div class="tooltip-container">
+                <button @onclick=ActFileChoose>Файл</button>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=@(() => isShowNewRequestModal = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-plus-circle">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v8M8 12h8" />
+                </svg>
+                <span class="tooltip-text">Добавить</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=GoToExperienceWithFilter xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-truck" viewBox="0 0 16 16">
+                    <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5zm1.294 7.456A2 2 0 0 1 4.732 11h5.536a2 2 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456M12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2" />
+                </svg>
+                <span class="tooltip-text">Выезды</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=@(() => isShowModal = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon>
+                </svg>
+                <span class="tooltip-text">Редактировать</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=@(() => isShowDeleteWindow = true) xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="feather feather-trash-2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                </svg>
+                <span class="tooltip-text">Удалить</span>
+            </div>
+
+            <div class="tooltip-container">
+                <svg @onclick=Close xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span class="tooltip-text">Закрыть</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row2">Информация</div>
+
+    <div class="row3">
+        <table>
+            <colgroup>
+                <col>
+                <col>
+            </colgroup>
+
+            <tr>
+                <td>Клиент</td>
+                <td><PulseApp.Components.Pages.SubComp.TypePresentation.ClientPrew Client=@Request.Client /></td>
+            </tr>
+
+            <tr>
+                <td>Дата добавления</td>
+                <td><PulseApp.Components.Pages.SubComp.TypePresentation.DateTimePrew date=@Request.Date IsDateShow=@true /></td>
+            </tr>
+
+            <tr>
+                <td>Причина</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Request.ReasonRequest @onblur=@(() => microRequestUpdate(nameof(Request.ReasonRequest))) /></td>
+            </tr>
+
+            <tr>
+                <td>Необходимые средства</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Request.NecessaryFunds @onblur=@(() => microRequestUpdate(nameof(Request.NecessaryFunds))) /></td>
+            </tr>
+
+            <tr>
+                <td>Менеджер</td>
+                <td><PulseApp.Components.Pages.SubComp.TypePresentation.ManagerPrew Manager=@Request.Manager /></td>
+            </tr>
+
+            <tr>
+                <td>Внутренняя информация</td>
+                <td><input style="width: 100%; height: 100%; border: none; background-color: transparent; outline: none;" @bind=@Request.InternalInfo @onblur=@(() => microRequestUpdate(nameof(Request.InternalInfo))) /></td>
+            </tr>
+
+            <tr>
+                <td>Статус</td>
+                <td>
+                    <PulseApp.Components.Pages.SubComp.FormComponents.RequestStatusSelection PreSelectedStatus=@Request.Status 
+                    SelectStatus=@((status) => {Request.Status = status; microRequestUpdate(nameof(Request.Status));}) />
+                </td>
+            </tr>
+
+            <tr>
+                <td>Файл акта</td>
+                @if (Request.Document != null)
+                {
+                    <td>
+                        <PulseApp.Components.Pages.SubComp.FormComponents.RequestDocumentPresentation FileName=@Request.Document.Title 
+                        OnOpen=@(async () => await OpenDownloadFile(Request.Document.DocumentId)) OnRemove=@RemoveRequestDocument OnReplace=@ActFileChoose />
+                    </td>
+                }
+                else
+                {
+                    <td>
+                        <button class="file-action-btn open-btn" @onclick="ActFileChoose">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#6a0dad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14 2V8H20" stroke="#6a0dad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 18V12" stroke="#6a0dad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9 15H15" stroke="#6a0dad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Добавить
+                        </button>
+                    </td>
+                }
+            </tr>
+
+            <tr>
+                <td>Файлы спецификации (видны сотрудникам)</td>
+                <td>
+                    <button class="big-add-button" @onclick=AddRequestFile>
+                        <svg class="plus-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M5 12H19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Добавить
+                    </button>
+                    @if (Request.Files != null)
+                    {
+                        @foreach (var file in Request.Files)
+                        {
+                            <PulseApp.Components.Pages.SubComp.FormComponents.RequestDocumentPresentation FileName=@file.Title 
+                            OnOpen=@(async () => await OpenDownloadFile(file.DocumentId)) OnRemove=@(async () => await RemoveRequestFile(file.DocumentId)) IsSpecifyFile=@true />
+                        }
+                    }
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Request Request { get; set; }
+    [Parameter]
+    public EventCallback Close { get; set; }
+
+    private string deleteMessage = "Вы действительно хотите удалить эту заявку?";
+
+    private bool isShowModal = false;
+
+    private bool isShowNewRequestModal = false;
+
+    private bool isShowDeleteWindow = false;
+
+    private void CloseUpdateRequestWindow()
+    {
+        isShowModal = !isShowModal;
+        //Request = request;
+        StateHasChanged();
+    }
+
+    private void CloseNewRequestWindow()
+    {
+        isShowNewRequestModal = !isShowNewRequestModal;
+    }
+
+    private void GoToExperienceWithFilter()
+    {
+        var expFilter = new Domain.Filters.ExperienceFilter()
+        {
+            Client = new Domain.DTO.Clients.ClientSelectionDTO() { ClientId = Request!.Client!.ClientId, Name = Request!.Client!.Name },
+            Request = new Domain.DTO.Requests.RequestSelectionDTO() { RequestId = Request!.RequestId, ClientId = Request!.Client!.ClientId, RequestTitle = Request!.ToString() }
+        };
+        var expFilterString = JsonSerializer.Serialize(expFilter);
+        expFilterString = Convert.ToBase64String(Encoding.UTF8.GetBytes(expFilterString));
+
+        NavigationManager.NavigateTo($"/experiencies/1/{expFilterString}");
+    }
+
+    private async Task ActFileChoose()
+    {
+        var res = await FilePicker.PickAsync();
+
+        if (res == null)
+            return;
+
+        var actFile = await File.ReadAllBytesAsync(res.FullPath);
+
+        LoadingService.ShowLoading();
+
+        var fileTitle = Path.GetFileName(res.FullPath);
+
+        if (fileTitle.Contains('/'))
+        {
+            var tmp = fileTitle.Split('/');
+            fileTitle = tmp[^1];
+        }
+
+        if (fileTitle.Contains("\\"))
+        {
+            var tmp = fileTitle.Split("\\");
+            fileTitle = tmp[^1];
+        }
+
+        Request.Document = new Document()
+        {
+            Title = fileTitle,
+            Extension = res.ContentType,
+            File = actFile
+        };
+
+        try
+        {
+            Request = await Mediator.Send(new UpdateRequestDocumentCommand() 
+            {
+                RequestId = Request.RequestId, 
+                Title = fileTitle,
+                Extension = res.ContentType,
+                File = actFile
+            });
+            NotificationService.ShowSuccess("Файл обновлен");
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+        }
+
+        LoadingService.HideLoading();
+        StateHasChanged();
+    }
+
+    private async Task AddRequestFile()
+    {
+        var file = await FilePicker.PickAsync();
+
+        if (file == null)
+            return;
+
+        LoadingService.ShowLoading();
+
+        var byteFile = await File.ReadAllBytesAsync(file.FullPath);
+
+        try
+        {
+            var doc = await Mediator.Send(new AddRequestFileCommand()
+            {
+                Title = file.FullPath,
+                Extension = file.ContentType,
+                File = byteFile,
+                RequestId = Request.RequestId
+            });
+
+            NotificationService.ShowSuccess("Файл добавлен");
+
+            if (Request.Files == null)
+                Request.Files = new List<Document>();
+
+            Request.Files.Add(doc);
+        }
+        catch
+        {
+            NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+        }
+
+        LoadingService.HideLoading();
+        StateHasChanged();
+    }
+
+    private async Task RemoveRequestFile(int docId)
+    {
+        try
+        {
+            await Mediator.Send(new RemoveRequestFileCommand()
+            {
+                RequestId = Request.RequestId,
+                DocumentId = docId
+            });
+
+            NotificationService.ShowSuccess("Файл откреплен");
+
+            var fileToRemove = Request.Files!.FirstOrDefault(f => f.DocumentId == docId);
+            if (fileToRemove != null)
+                Request.Files!.Remove(fileToRemove);
+        }
+        catch
+        {
+            NotificationService.ShowError("Сервер вернул ошибку. Проверьте подключение к интернету");
+        }
+    }
+
+    private async Task OpenDownloadFile(int docId)
+    {
+        string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        string requestFolder = Path.Combine(assemblyFolder, "RequestFiles");
+
+        Directory.CreateDirectory(requestFolder);
+
+        string[] matchingFiles = Directory.GetFiles(requestFolder, $"{docId}.*");
+        if (matchingFiles.Length > 0)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = matchingFiles[0],
+                UseShellExecute = true 
+            });
+        }
+        else
+        {
+            try
+            {
+                var doc = await Mediator.Send(new DownloadDocumentQuery() { DocumentId = docId });
+                string ext = GetFileExtension(doc.Extension);
+                string filePath = Path.Combine(requestFolder, $"{docId}{ext}");
+                File.WriteAllBytes(filePath, doc.File);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true 
+                });
+            }
+            catch
+            {
+                NotificationService.ShowError("Не удалось скачать файл");
+            }
+        }
+    }
+
+    private async Task RemoveRequestDocument()
+    {
+        try
+        {
+            await Mediator.Send(new RemoveRequestDocumentCommand() {RequestId = Request.RequestId});
+            Request.Document = null;
+            Request.DocumentId = null;
+            StateHasChanged();
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Не удалось открепить файл, проверьте подключение к интернету");
+        }
+    }
+
+    private Dictionary<string, bool> IsPropChanging = new();
+
+    protected override void OnInitialized()
+    {
+        if (Request == null)
+        {
+            NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+            return;
+        }
+        IsPropChanging.Add(nameof(Request.ReasonRequest), false);
+        IsPropChanging.Add(nameof(Request.NecessaryFunds), false);
+        IsPropChanging.Add(nameof(Request.Status), false);
+        IsPropChanging.Add(nameof(Request.InternalInfo), false);
+
+        SelectedRequestStatus = ((int)Request.Status).ToString();
+
+        if (Request != null)
+            deleteMessage = $"Вы действительно хотите удалить заявку {Request.RequestId}?";
+    }
+
+    private string selectedRequestStatus = "";
+    private string SelectedRequestStatus
+    {
+        get
+        {
+            return selectedRequestStatus;
+        }
+        set
+        {
+            selectedRequestStatus = value;
+            if (value == "1")
+                Request.Status = Domain.enums.Status.AtWork;
+            else if (value == "2")
+                Request.Status = Domain.enums.Status.Postponed;
+            else if (value == "3")
+                Request.Status = Domain.enums.Status.Finished;
+            else
+                Request.Status = Domain.enums.Status.None;
+        }
+    }
+
+    private async Task microRequestUpdate(string propName)
+    {
+        IsPropChanging[propName] = false;
+
+        var command = new UpdateRequestCommand() { Id = Request.RequestId };
+
+        switch (propName)
+        {
+            case nameof(Request.ReasonRequest):
+                command.ReasonRequest = Request.ReasonRequest;
+                break;
+            case nameof(Request.NecessaryFunds):
+                command.NecessaryFunds = Request.NecessaryFunds;
+                break;
+            case nameof(Request.InternalInfo):
+                command.InternalInfo = Request.InternalInfo;
+                break;
+            case nameof(Request.Status):
+                command.Status = Request.Status;
+                break;
+        }
+
+        try
+        {
+            await Mediator.Send(command);
+            NotificationService.ShowSuccess("Заявка обновлена!");
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Произошла ошибка! Заявка не обновлена!");
+        }
+    }
+
+    private static string GetFileExtension(string contentType)
+    {
+        return contentType switch
+        {
+            "text/plain" => ".txt",
+            "application/pdf" => ".pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => ".docx",
+            "image/jpeg" => ".jpg",
+            "image/png" => ".png",
+            _ => ".bin" 
+        };
+    }
+
+    private async Task DeleteRequest()
+    {
+        try
+        {
+            await Mediator.Send(new DeleteRequestCommand() {RequestId = Request.RequestId});
+            NavigationManager.NavigateTo(NavigationManager.Uri, true);
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+        }
+        catch
+        {
+            NotificationService.ShowError("Непредвиденная ошибка, обратитесь к администрату");
+        }
+    }
+}

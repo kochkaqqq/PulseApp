@@ -1,0 +1,73 @@
+﻿@using Logic.Servicies
+@using Microsoft.Extensions.Configuration
+@using Domain
+
+@inject NotificationService NotificationService
+@inject LoadingService LoadingService
+@inject IConfiguration Configuration
+
+@inherits LayoutComponentBase
+
+<PulseApp.Components.Pages.SubComp.Notification @ref=NotificationComponent />
+<PulseApp.Components.Pages.SubComp.Loading @ref=Loading />
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private Pages.SubComp.Notification NotificationComponent;
+    private Pages.SubComp.Loading Loading;
+
+    private bool isShowLoadingGif = false;
+
+    private Manager manager { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var m = Configuration.GetSection("Manager");
+
+        NotificationService.OnSuccess += ShowSuccess;
+        NotificationService.OnError += ShowError;
+
+        LoadingService.OnStartLoading += ShowLoadingGif;
+        LoadingService.OnFinishLoading += HideLoadingGif;
+    }
+
+    private void ShowSuccess(string message)
+    {
+        NotificationComponent?.ShowSuccess(message);
+    }
+
+    private void ShowError(string message)
+    {
+        NotificationComponent?.ShowError(message);
+    }
+
+    private void ShowLoadingGif()
+    {
+        Loading?.ShowLoading();
+    }
+
+    private void HideLoadingGif()
+    {
+        Loading?.HideLoading();
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnSuccess -= ShowSuccess;
+        NotificationService.OnError -= ShowError;
+
+        LoadingService.OnStartLoading -= ShowLoadingGif;
+        LoadingService.OnFinishLoading -= HideLoadingGif;
+    }
+}

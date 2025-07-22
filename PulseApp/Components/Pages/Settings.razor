@@ -1,0 +1,115 @@
+@page "/settings"
+
+@using Domain
+@using ApiClient.Worker.Queries.GetWorkers
+@using MediatR
+@using Logic.Servicies
+@using ApiClient.Worker.Commands.DeleteWorker
+@using Logic.enums
+
+@inject IMediator Mediator
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
+
+@if (isLoading)
+{
+    <p>Загрузка...</p>
+}
+else
+{
+    @if (isShowNewWorkerWindow)
+    {
+        <PulseApp.Components.Pages.SubComp.ModalWindow ModalWindowWidth="55" IsOpen=@isShowNewWorkerWindow OnClose=@(() => isShowNewWorkerWindow = false)  WindowType=@ModalWindowType.NewWorker />
+    }
+
+    <button class="big-add-button" @onclick=@(() => isShowNewWorkerWindow = true)>
+        <svg class="plus-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19" stroke="white" stroke-width="2" stroke-linecap="round" />
+            <path d="M5 12H19" stroke="white" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        Добавить
+    </button>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Имя</th>
+                    <th>Ключ для входа</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var worker in workers)
+                {
+                    <tr>
+                        <td>@worker.WorkerId</td>
+                        <td>@worker.Name</td>
+                        <td>@worker.ApiKey</td>
+                        <td>
+                            <button class="delete-btn" @onclick=@(async () => await DeleteWorker(worker.WorkerId))>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 6H5H21" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 21 17 21H7C6.46957 21 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M10 11V17" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M14 11V17" stroke="#ff3b30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Удалить
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+
+    private bool isShowNewWorkerWindow = false;
+
+    private List<Worker> workers { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            workers = await Mediator.Send(new GetWorkersQuery());
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+        }
+        catch
+        {
+            NotificationService.ShowError("Сервер вернул некорректные данные, обратитесь к администратору");
+        }
+    }
+
+    private async Task DeleteWorker(int id)
+    {
+        try
+        {
+            await Mediator.Send(new DeleteWorkerCommand() {Id = id});
+
+            var workerForDel = workers.FirstOrDefault(w => w.WorkerId == id);
+            if (workerForDel != null)
+                workers.Remove(workerForDel);
+
+            NotificationService.ShowSuccess("Сотрудник удален");
+            StateHasChanged();
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Произошла ошибка, проверьте подключение к интернету");
+        }
+        catch
+        {
+            NotificationService.ShowError("Сервер вернул некорректные данные, обратитесь к администратору");
+        }
+    }
+}

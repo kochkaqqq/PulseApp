@@ -1,0 +1,198 @@
+@using MediatR
+@using Logic.Servicies
+@using Domain.DTO
+@using Domain.DTO.Experiences
+@using ApiClient.Experience.Queries.GetExperienceGantDTOByDate
+@using ApiClient.Worker.Queries.GetWorkerDTOList
+@using ApiClient.Experience.Queries.GetExperience
+@using Domain;
+@using Logic.enums
+
+@inject IMediator Mediator
+@inject LoadingService LoadingService
+@inject NotificationService NotificationService
+
+@if (isShowExistingExperience)
+{
+    <ModalWindow Entity=@openedExperience WindowType=@ModalWindowType.ExistingExperience 
+    IsOpen=@isShowExistingExperience ModalWindowWidth=80 OnClose=@(() => isShowExistingExperience = false) />
+}
+
+<table style="width: 100%; border-collapse: collapse; border: 1px solid black; margin-top: 2em;">
+    <thead>
+        <tr>
+            <th style="border: 1px solid black; padding: 8px;"></th>
+
+            @foreach (var time in TimeSlots)
+            {
+                <th style="border: 1px solid black; padding: 8px;">@time</th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var worker in workers)
+        {
+            <tr>
+                <td style="border: 1px solid black; padding: 8px; font-weight: bold;">@worker.Name</td>
+                @foreach (var time in TimeSlots)
+                {
+                    <td style="border: 1px solid black; padding: 8px; background-color: @(GetCellColor(worker, time));"
+                    @onclick=@(() => OpenExperience(worker, time)) >
+                        &nbsp;
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired]
+    public DateTime DateTime { get; set; }
+
+    private List<string> TimeSlots => Enumerable.Range(8, 11)
+        .Select(hour => $"{hour:D2}:00")
+        .ToList();
+
+    private List<string> colors;
+    private Dictionary<ExperienceGantDTO, string> expColor;
+
+    private List<ExperienceGantDTO> experiences = new();
+    private List<WorkerDTO> workers = new();
+
+    private Experience openedExperience;
+
+    private bool isShowExistingExperience = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LoadingService.ShowLoading();
+
+        try
+        {
+            experiences = await Mediator.Send(new GetExperienceGantDTOByDateQuery() { Date = DateTime });
+            workers = await Mediator.Send(new GetWorkerDTOListQuery());
+        }
+        catch (HttpRequestException)
+        {
+            NotificationService.ShowError("Нет ответа от сервера, проверьте подключение к интернету");
+        }
+
+        colors = FillColorsList(experiences.Count);
+
+        expColor = experiences.Zip(colors, (key, value) => new { key, value }).ToDictionary(x => x.key, x => x.value);
+
+        LoadingService.HideLoading();
+    }
+
+    private string GetCellColor(WorkerDTO worker, string timeString)
+    {
+        var hourMin = timeString.Split(":").Select(n => int.Parse(n)).ToArray();
+        var time = new DateTime(2025, 04, 27, hourMin[0], hourMin[1], 0);
+        var res = IsTaskActive(worker, time);
+        if (res.Item1)
+            return expColor[res.Item2];
+        return "white";
+    }
+
+    private Tuple<bool, ExperienceGantDTO> IsTaskActive(WorkerDTO worker, DateTime time)
+    {
+        foreach (var experience in experiences)
+        {
+            if (experience.TimeStart == null || experience.TimeEnd == null)
+                continue;
+
+            if (experience.WorkerIds.FirstOrDefault(id => id == worker.Id) != default)
+                if (time.Hour >= experience.TimeStart.Value.Hour && time.Hour <= experience.TimeEnd.Value.Hour)
+                    return new Tuple<bool, ExperienceGantDTO>(true, experience);
+        }
+
+        return new Tuple<bool, ExperienceGantDTO>(false, null);
+    }
+
+    public static string GenerateColor(int objectNumber, int totalObjects)
+    {
+        double saturation = 0.7; 
+        double value = 0.9;      
+
+        double hue = (objectNumber * 360.0 / totalObjects) % 360;
+
+        (int r, int g, int b) = HsvToRgb(hue, saturation, value);
+
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
+
+    private static (int r, int g, int b) HsvToRgb(double h, double s, double v)
+    {
+        double c = v * s;
+        double x = c * (1 - Math.Abs((h / 60) % 2 - 1));
+        double m = v - c;
+
+        double r, g, b;
+        if (h < 60)
+            (r, g, b) = (c, x, 0);
+        else if (h < 120)
+            (r, g, b) = (x, c, 0);
+        else if (h < 180)
+            (r, g, b) = (0, c, x);
+        else if (h < 240)
+            (r, g, b) = (0, x, c);
+        else if (h < 300)
+            (r, g, b) = (x, 0, c);
+        else
+            (r, g, b) = (c, 0, x);
+
+        int red = (int)((r + m) * 255);
+        int green = (int)((g + m) * 255);
+        int blue = (int)((b + m) * 255);
+
+        return (red, green, blue);
+    }
+
+    private static List<string> FillColorsList(int expNum)
+    {
+        var res = new List<string>();
+
+        for (int i = 0; i < expNum; i++)
+        {
+            res.Add(GenerateColor(i, expNum));
+        }
+
+        return res;
+    }
+
+    private async Task OpenExperience(WorkerDTO worker, string timeString)
+    {
+        LoadingService.ShowLoading();
+
+        var hourMin = timeString.Split(":").Select(n => int.Parse(n)).ToArray();
+        var time = new DateTime(2025, 04, 27, hourMin[0], hourMin[1], 0);
+        var exps = experiences.Where(e => e.WorkerIds.Contains(worker.Id)).Where(e => time.Hour >= e.TimeStart.Value.Hour && time.Hour <= e.TimeEnd.Value.Hour).ToList();
+
+        if (exps.Count == 0)
+        {
+            NotificationService.ShowError("Ошибка! Не найдено ни одного выезда на это время");
+            LoadingService.HideLoading();
+            return;
+        }
+
+        if (exps.Count > 1)
+        {
+
+        }
+        else
+        {
+            try
+            {
+                openedExperience = await Mediator.Send(new GetExperienceQuery() { ExperienceId = exps[0].ExperienceId });
+                isShowExistingExperience = true;
+            }
+            catch (HttpRequestException)
+            {
+                NotificationService.ShowError("Нет ответа от сервера, проверьте подключение к интернету");
+            }
+
+            LoadingService.HideLoading();
+        }
+    }
+}

@@ -1,0 +1,37 @@
+.container {
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: auto;
+}
+
+.row1, .row2 {
+    padding: 10px;
+}
+
+.row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.save-button {
+    width: 100%;
+    height: 50px;
+    background-color: #4CAF50; /* Зеленый цвет фона */
+    border: none; /* Убираем границу */
+    color: white; /* Цвет текста */
+    padding: 10px 20px; /* Отступы внутри кнопки */
+    text-align: center; /* Выравнивание текста по центру */
+    text-decoration: none; /* Убираем подчеркивание текста */
+    display: inline-block; /* Делаем кнопку блочным элементом */
+    font-size: 16px; /* Размер шрифта */
+    margin: 4px 2px; /* Отступы внешние */
+    cursor: pointer; /* Курсор меняется при наведении */
+    border-radius: 12px; /* Закругление углов */
+    transition: background-color 0.3s; /* Плавный переход цвета при наведении */
+}
+
+    .save-button:hover {
+        background-color: #45a049; /* Цвет фона при наведении */
+    }

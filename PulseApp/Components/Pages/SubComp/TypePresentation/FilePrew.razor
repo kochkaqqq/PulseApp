@@ -1,0 +1,25 @@
+@using Domain
+@using System.Diagnostics
+@using System.Reflection
+
+
+<label><a style="color: blue; text-decoration: underline; cursor: pointer;" @onclick=OpenFile>@Document.Title</a></label>
+
+@code {
+	[Parameter, EditorRequired]
+	public Document Document { get; set; }
+
+	private async Task OpenFile()
+	{
+		string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new Exception();
+		string filepath = Path.Combine(directory, Document.Title);
+
+		await File.WriteAllBytesAsync(filepath, Document.File);
+
+		Process.Start(new ProcessStartInfo()
+		{
+			FileName = filepath,
+			UseShellExecute = true
+		});
+	}
+}
